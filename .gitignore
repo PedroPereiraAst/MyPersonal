@@ -1,0 +1,19 @@
+# Ignora node_modules em QUALQUER pasta do projeto
+node_modules/
+**/node_modules/
+
+# Ignora senhas e chaves secretas
+.env
+.env.local
+**/.env
+
+# Ignora arquivos de build e cache do Expo e Server
+dist/
+.expo/
+.web/
+
+# Logs do sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
