@@ -1,9 +1,9 @@
-import Fastify from "fastify";
 import dotenv from "dotenv";
+dotenv.config();
+
+import Fastify from "fastify";
 import { personalRoutes } from "./routes/personal.routes.js";
 
-// Carrega as variáveis do arquivo .env
-dotenv.config();
 
 // Criação da instância do servidor Fastify com logger ativado
 const app = Fastify({

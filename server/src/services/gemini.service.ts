@@ -1,8 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 import { AvaliacaoSchema, TreinoSchema, type AvaliacaoFisica, type FichaTreino } from '../types/schemas.js';
 
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+function getAIClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY não foi encontrada nas variáveis de ambiente (.env)');
+  }
+  return new GoogleGenAI({ apiKey });
+}
+
 
 export interface ImagemInput {
   mimeType: string;
@@ -78,6 +84,7 @@ Instruções para a Avaliação:
       },
     }));
 
+    const ai = getAIClient();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [promptText, ...imageParts],
@@ -125,6 +132,7 @@ Instruções para a Prescrição:
 3. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
 `;
 
+    const ai = getAIClient();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [promptText],
