@@ -233,7 +233,7 @@ export default function App() {
               <Text style={styles.cardTitle}>📋 Dados Biométricos</Text>
 
               <Text style={styles.label}>Nome Completo</Text>
-              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor="#64748b" />
+              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: John Doe" placeholderTextColor="#64748b" />
 
               <View style={styles.row}>
                 <View style={styles.halfInput}>
@@ -286,7 +286,7 @@ export default function App() {
               </View>
 
               {/* OBSERVAÇÕES E PEDIDOS DE AJUSTE */}
-              <Text style={[styles.label, { marginTop: 12 }]}>Observações / O que deseja mudar no treino?</Text>
+              <Text style={[styles.label, { marginTop: 12 }]}>Observações / Preferências</Text>
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 value={observacoes}
