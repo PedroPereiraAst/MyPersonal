@@ -17,15 +17,16 @@ function getAIClient() {
   return new GoogleGenAI({ apiKey });
 }
 
-// Função de resiliência: Utiliza EXCLUSIVAMENTE o gemini-3.6-flash com até 3 retentativas em caso de 503 (alta demanda)
+// Função de resiliência total: Tenta o modelo preferido e faz fallback automático se atingir cota (429) ou alta demanda (503)
 async function generateContentWithRetry(ai: any, params: any) {
-  const model = params.model || 'gemini-3.6-flash';
-  const maxRetries = 3;
-  let lastError: any;
+  const preferredModel = params.model || 'gemini-3.6-flash';
+  const fallbackModels = [preferredModel, 'gemini-2.5-flash', 'gemini-2.0-flash'];
+  const modelsToTry = [...new Set(fallbackModels)].filter(Boolean);
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  let lastError: any;
+  for (const model of modelsToTry) {
     try {
-      console.log(`🤖 [Tentativa ${attempt}/${maxRetries}] Solicitando geração ao modelo: ${model}...`);
+      console.log(`🤖 Solicitando geração ao modelo: ${model}...`);
       const response = await ai.models.generateContent({
         ...params,
         model,
@@ -33,15 +34,19 @@ async function generateContentWithRetry(ai: any, params: any) {
       return response;
     } catch (err: any) {
       lastError = err;
-      const isHighDemand =
+      const isQuotaOrHighDemand =
         err.status === 503 ||
         err.statusCode === 503 ||
+        err.status === 429 ||
+        err.statusCode === 429 ||
+        String(err.message).includes('429') ||
         String(err.message).includes('503') ||
+        String(err.message).includes('quota') ||
         String(err.message).includes('high demand');
 
-      if (isHighDemand && attempt < maxRetries) {
-        console.warn(`⚠️ Modelo ${model} em alta demanda (503). Retentando em 1.5s (${attempt}/${maxRetries})...`);
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (isQuotaOrHighDemand) {
+        console.warn(`⚠️ Modelo ${model} atingiu trava de cota (429/503). Chaveando automaticamente para modelo alternativo...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         continue;
       }
       throw err;
