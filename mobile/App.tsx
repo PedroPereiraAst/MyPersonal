@@ -27,9 +27,10 @@ export default function App() {
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [objetivo, setObjetivo] = useState('Hipertrofia');
-  const [nivel, setNivel] = useState('Intermediario');
+  const [nivel, setNivel] = useState('Intermediário');
   const [dias, setDias] = useState('4');
   const [limitacoes, setLimitacoes] = useState('');
+  const [observacoes, setObservacoes] = useState('');
 
   // Regra do Nutricionista
   const [passouNutricionista, setPassouNutricionista] = useState<boolean | null>(null);
@@ -43,6 +44,12 @@ export default function App() {
   const [resultadoAvaliacao, setResultadoAvaliacao] = useState<AvaliacaoFisica | null>(null);
   const [resultadoTreino, setResultadoTreino] = useState<FichaTreino | null>(null);
 
+  // Lista de Objetivos Disponíveis
+  const listaObjetivos = ['Hipertrofia', 'Definição', 'Powerlifting', 'Endurance', 'Calistenia'];
+
+  // Lista de Níveis de Experiência
+  const listaNiveis = ['Iniciante', 'Intermediário', 'Avançado'];
+
   // Função para tirar/selecionar foto
   const selecionarFoto = async (tipo: 'frente' | 'costas' | 'perfil') => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -51,7 +58,6 @@ export default function App() {
       quality: 0.5, // Compressão de 50% para otimizar envio no Wi-Fi
       base64: true,
     });
-
 
     if (!result.canceled && result.assets[0].base64) {
       const asset = result.assets[0];
@@ -95,6 +101,7 @@ export default function App() {
       nivel_experiencia: nivel,
       dias_disponiveis: Number(dias),
       limitacoes_lesoes: limitacoes,
+      observacoes_usuario: observacoes,
       passou_nutricionista: passouNutricionista,
       bf_informado: bfInformado ? Number(bfInformado) : undefined,
       autoriza_estimativa_bf: autorizaEstimativa,
@@ -125,6 +132,7 @@ export default function App() {
       nivel_experiencia: nivel,
       dias_disponiveis: Number(dias),
       limitacoes_lesoes: limitacoes,
+      observacoes_usuario: observacoes,
       passou_nutricionista: passouNutricionista || false,
       bf_informado: bfInformado ? Number(bfInformado) : undefined,
     };
@@ -171,7 +179,7 @@ export default function App() {
               <Text style={styles.cardTitle}>📋 Dados Biométricos</Text>
 
               <Text style={styles.label}>Nome Completo</Text>
-              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: John Doe" placeholderTextColor="#64748b" />
+              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor="#64748b" />
 
               <View style={styles.row}>
                 <View style={styles.halfInput}>
@@ -194,6 +202,46 @@ export default function App() {
                   <TextInput style={styles.input} value={dias} onChangeText={setDias} keyboardType="numeric" placeholder="4" placeholderTextColor="#64748b" />
                 </View>
               </View>
+
+              {/* SELEÇÃO DO OBJETIVO */}
+              <Text style={[styles.label, { marginTop: 12 }]}>Objetivo Principal:</Text>
+              <View style={styles.chipContainer}>
+                {listaObjetivos.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.chip, objetivo === item && styles.chipActive]}
+                    onPress={() => setObjetivo(item)}
+                  >
+                    <Text style={[styles.chipText, objetivo === item && styles.chipTextActive]}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* SELEÇÃO DO NÍVEL / TEMPO DE TREINO */}
+              <Text style={[styles.label, { marginTop: 12 }]}>Nível / Tempo de Treino:</Text>
+              <View style={styles.chipContainer}>
+                {listaNiveis.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.chip, nivel === item && styles.chipActive]}
+                    onPress={() => setNivel(item)}
+                  >
+                    <Text style={[styles.chipText, nivel === item && styles.chipTextActive]}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* OBSERVAÇÕES E PEDIDOS DE AJUSTE */}
+              <Text style={[styles.label, { marginTop: 12 }]}>Observações / O que deseja mudar no treino?</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                value={observacoes}
+                onChangeText={setObservacoes}
+                multiline
+                numberOfLines={3}
+                placeholder="Ex: Quero focar mais em glúteos e ombros. Não quero exercícios de braço na sexta-feira."
+                placeholderTextColor="#64748b"
+              />
 
               {/* REGRA DO NUTRICIONISTA */}
               <Text style={[styles.label, { marginTop: 15 }]}>Você já passou por consulta com nutricionista?</Text>
@@ -325,8 +373,14 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#f8fafc', marginBottom: 15 },
   label: { fontSize: 13, fontWeight: '600', color: '#cbd5e1', marginBottom: 6 },
   input: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#f8fafc', marginBottom: 12 },
+  multilineInput: { minHeight: 70, textAlignVertical: 'top' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfInput: { width: '48%' },
+  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#0f172a', borderRadius: 20, borderWidth: 1, borderColor: '#334155' },
+  chipActive: { backgroundColor: '#0284c7', borderColor: '#38bdf8' },
+  chipText: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
+  chipTextActive: { color: '#ffffff', fontWeight: 'bold' },
   rowButtons: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   toggleBtn: { flex: 1, padding: 12, backgroundColor: '#0f172a', borderRadius: 8, borderWidth: 1, borderColor: '#334155', alignItems: 'center' },
   toggleBtnActive: { backgroundColor: '#0284c7', borderColor: '#38bdf8' },
@@ -349,4 +403,3 @@ const styles = StyleSheet.create({
   exerciseName: { color: '#f8fafc', fontWeight: 'bold', fontSize: 14 },
   exerciseDetails: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
 });
-

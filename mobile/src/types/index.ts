@@ -6,7 +6,8 @@ export interface AnamneseFormData {
   objetivo: string;
   nivel_experiencia: string;
   dias_disponiveis: number;
-  limitacoes_lesoes?: string;
+  // Observações e Preferências do Aluno
+  observacoes_usuario?: string;
   
   // Regra do Nutricionista
   passou_nutricionista: boolean;

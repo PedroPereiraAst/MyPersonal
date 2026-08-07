@@ -24,6 +24,8 @@ export interface AnamneseInput {
   nivel_experiencia: string;// ex: 'Iniciante', 'Intermediario', 'Avancado'
   dias_disponiveis: number;
   limitacoes_lesoes?: string;
+  observacoes_usuario?: string; // Observações extras e pedidos de ajuste do aluno
+
   
   // NOVOS CAMPOS INTELIGENTES:
   passou_nutricionista: boolean;
@@ -121,6 +123,7 @@ Dados do Aluno:
 - Frequência Semanal: ${anamnese.dias_disponiveis} dias
 - Objetivo: ${anamnese.objetivo}
 - Limitações/Lesões: ${anamnese.limitacoes_lesoes || 'Nenhuma'}
+- Observações e Pedidos do Aluno: ${anamnese.observacoes_usuario || 'Nenhum'}
 
 Resultado da Avaliação Física Aprovada:
 - BF Utilizado: ${avaliacao.bf_estimado}
@@ -130,8 +133,9 @@ Resultado da Avaliação Física Aprovada:
 
 Instruções para a Prescrição:
 1. Monte uma divisão de treino coerente com a frequência semanal de ${anamnese.dias_disponiveis} dias.
-2. Dê prioridade de volume aos pontos fracos identificados na avaliação.
-3. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
+2. Monte sessões completas prescrevendo EM MÉDIA 6 EXERCÍCIOS por sessão de treino (ajustando a estrutura conforme o objetivo: ${anamnese.objetivo}).
+3. Dê prioridade de volume aos pontos fracos identificados na avaliação e respeite estritamente os pedidos/observações do aluno.
+4. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
 `;
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
