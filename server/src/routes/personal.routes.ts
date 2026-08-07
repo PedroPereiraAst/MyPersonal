@@ -28,17 +28,13 @@ export async function personalRoutes(fastify: FastifyInstance) {
       // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
       const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
 
-      // 2. Persiste APENAS dados biométricos e diagnóstico textual no Supabase PostgreSQL
-      // (Nenhuma foto é salva em disco ou cloud por questões de privacidade/LGPD)
-      const persistencia = await SupabaseService.salvarAvaliacao(
-        anamnese,
-        avaliacao.avaliacao
-      );
-
-      return reply.status(200).send({
-        ...avaliacao,
-        persistencia: persistencia || undefined,
+      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante), garantindo resposta em tempo recorde para o celular
+      SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao).catch((err) => {
+        console.warn('⚠️ Alerta não-bloqueante ao salvar no Supabase:', err.message);
       });
+
+      // Retorna o diagnóstico para a tela do aplicativo imediatamente!
+      return reply.status(200).send(avaliacao);
     } catch (error: any) {
       fastify.log.error(error);
       return reply.status(500).send({
@@ -72,8 +68,10 @@ export async function personalRoutes(fastify: FastifyInstance) {
       // 1. Chama a geração de treino no GeminiService (Gemini 3.6 Flash)
       const treino = await GeminiService.gerarTreinoPrescrito(anamnese, avaliacao);
 
-      // 2. Persiste a Ficha de Treino no Supabase PostgreSQL
-      await SupabaseService.salvarTreino(treino, avaliacaoId, alunoId);
+      // 2. Persiste assincronamente a Ficha de Treino no Supabase em segundo plano
+      SupabaseService.salvarTreino(treino, avaliacaoId, alunoId).catch((err) => {
+        console.warn('⚠️ Alerta não-bloqueante ao salvar treino no Supabase:', err.message);
+      });
 
       return reply.status(200).send(treino);
     } catch (error: any) {

@@ -1,9 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+function getSupabaseClient(): SupabaseClient | null {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('sua_url')) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, supabaseKey);
+  } catch {
+    return null;
+  }
+}
 
 export class SupabaseService {
   /**
@@ -12,10 +22,14 @@ export class SupabaseService {
    */
   static async salvarAvaliacao(anamnese: any, avaliacao: any) {
     try {
-      if (!supabaseUrl || !supabaseKey) return null;
+      const client = getSupabaseClient();
+      if (!client) {
+        console.log('ℹ️ Supabase não configurado. Pulando gravação no banco.');
+        return null;
+      }
 
       // 1. Inserir Aluno
-      const { data: aluno, error: errAluno } = await supabase
+      const { data: aluno, error: errAluno } = await client
         .from('alunos')
         .insert({
           nome: anamnese.nome,
@@ -34,7 +48,7 @@ export class SupabaseService {
       }
 
       // 2. Inserir Avaliação (Apenas métricas numéricas e diagnósticos textuais)
-      const { data: registroAvaliacao, error: errAvaliacao } = await supabase
+      const { data: registroAvaliacao, error: errAvaliacao } = await client
         .from('avaliacoes')
         .insert({
           aluno_id: aluno.id,
@@ -65,9 +79,13 @@ export class SupabaseService {
    */
   static async salvarTreino(treino: any, avaliacaoId?: string, alunoId?: string) {
     try {
-      if (!supabaseUrl || !supabaseKey) return null;
+      const client = getSupabaseClient();
+      if (!client) {
+        console.log('ℹ️ Supabase não configurado. Pulando gravação do treino.');
+        return null;
+      }
 
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('treinos')
         .insert({
           avaliacao_id: avaliacaoId || null,
