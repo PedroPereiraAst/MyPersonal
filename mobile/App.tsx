@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from './src/services/supabase';
 import {
   enviarAvaliacaoAnamnese,
   solicitarGeracaoTreino,
@@ -22,6 +23,13 @@ import {
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
 export default function App() {
+  // Controle de Sessão de Autenticação Supabase
+  const [session, setSession] = useState<any>(null);
+  const [abaAuth, setAbaAuth] = useState<'login' | 'cadastro'>('login');
+  const [emailAuth, setEmailAuth] = useState('');
+  const [senhaAuth, setSenhaAuth] = useState('');
+  const [carregandoAuth, setCarregandoAuth] = useState(false);
+
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
   const [faseAtual, setFaseAtual] = useState<1 | 2 | 3>(1);
   const [carregando, setCarregando] = useState(false);
@@ -59,11 +67,84 @@ export default function App() {
   const [motivoTroca, setMotivoTroca] = useState('');
   const [carregandoTroca, setCarregandoTroca] = useState(false);
 
-  // Lista de Objetivos Disponíveis
+  // Lista de Objetivos e Níveis
   const listaObjetivos = ['Hipertrofia', 'Definição', 'Powerlifting', 'Endurance', 'Calistenia'];
-
-  // Lista de Níveis de Experiência
   const listaNiveis = ['Iniciante', 'Intermediário', 'Avançado'];
+
+  // Escutar Estado de Autenticação Supabase
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setNome(session.user.user_metadata?.nome || session.user.email?.split('@')[0] || '');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        setNome(session.user.user_metadata?.nome || session.user.email?.split('@')[0] || '');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Executar Login
+  const handleLogin = async () => {
+    if (!emailAuth || !senhaAuth) {
+      Alert.alert('Campos Obrigatórios', 'Por favor, preencha seu Email e Senha.');
+      return;
+    }
+
+    setCarregandoAuth(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailAuth,
+      password: senhaAuth,
+    });
+    setCarregandoAuth(false);
+
+    if (error) {
+      Alert.alert('Erro ao Entrar', error.message);
+    }
+  };
+
+  // Executar Cadastro
+  const handleCadastro = async () => {
+    if (!emailAuth || !senhaAuth || !nome) {
+      Alert.alert('Campos Obrigatórios', 'Por favor, preencha Nome, Email e Senha.');
+      return;
+    }
+
+    if (senhaAuth.length < 6) {
+      Alert.alert('Senha Curta', 'A senha deve conter no mínimo 6 caracteres.');
+      return;
+    }
+
+    setCarregandoAuth(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: emailAuth,
+      password: senhaAuth,
+      options: {
+        data: { nome },
+      },
+    });
+    setCarregandoAuth(false);
+
+    if (error) {
+      Alert.alert('Erro no Cadastro', error.message);
+    } else {
+      Alert.alert('Conta Criada com Sucesso!', 'Sua conta foi cadastrada e você já está logado!');
+    }
+  };
+
+  // Executar Logout / Sair
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setFaseAtual(1);
+    setResultadoAvaliacao(null);
+    setResultadoTreino(null);
+  };
 
   // Função para tirar/selecionar foto
   const selecionarFoto = async (tipo: 'frente' | 'costas' | 'perfil') => {
@@ -157,7 +238,7 @@ export default function App() {
       const treino = await solicitarGeracaoTreino(
         anamneseData,
         resultadoAvaliacao.avaliacao,
-        resultadoAvaliacao.persistencia?.alunoId,
+        session?.user?.id || resultadoAvaliacao.persistencia?.alunoId,
         resultadoAvaliacao.persistencia?.avaliacaoId
       );
       setResultadoTreino(treino);
@@ -188,7 +269,6 @@ export default function App() {
         motivoTroca
       );
 
-      // Atualiza o treino presencialmente no estado
       const novoTreino = JSON.parse(JSON.stringify(resultadoTreino)) as FichaTreino;
       novoTreino.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
         exercicioParaSubstituir.exercicioIndex
@@ -208,13 +288,100 @@ export default function App() {
     }
   };
 
+  // SE O USUÁRIO NÃO ESTIVER LOGADO -> EXIBIR TELA DE AUTENTICAÇÃO (FASE 0)
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }}>
+          <View style={styles.authCard}>
+            <Text style={styles.authLogo}>🏋️ MyPersonal AI</Text>
+            <Text style={styles.authSubtitle}>Seu Personal Trainer Inteligente com Visão Computacional</Text>
+
+            {/* TAB TOGGLE ENTRAR / CRIAR CONTA */}
+            <View style={styles.authTabContainer}>
+              <TouchableOpacity
+                style={[styles.authTab, abaAuth === 'login' && styles.authTabActive]}
+                onPress={() => setAbaAuth('login')}
+              >
+                <Text style={[styles.authTabText, abaAuth === 'login' && styles.authTabTextActive]}>Entrar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.authTab, abaAuth === 'cadastro' && styles.authTabActive]}
+                onPress={() => setAbaAuth('cadastro')}
+              >
+                <Text style={[styles.authTabText, abaAuth === 'cadastro' && styles.authTabTextActive]}>Criar Conta</Text>
+              </TouchableOpacity>
+            </View>
+
+            {abaAuth === 'cadastro' && (
+              <View>
+                <Text style={styles.label}>Nome Completo</Text>
+                <TextInput
+                  style={styles.input}
+                  value={nome}
+                  onChangeText={setNome}
+                  placeholder="Ex: Pedro Pereira"
+                  placeholderTextColor="#64748b"
+                />
+              </View>
+            )}
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={emailAuth}
+              onChangeText={setEmailAuth}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="seuemail@exemplo.com"
+              placeholderTextColor="#64748b"
+            />
+
+            <Text style={styles.label}>Senha</Text>
+            <TextInput
+              style={styles.input}
+              value={senhaAuth}
+              onChangeText={setSenhaAuth}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor="#64748b"
+            />
+
+            {carregandoAuth ? (
+              <ActivityIndicator size="large" color="#38bdf8" style={{ marginTop: 15 }} />
+            ) : (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={abaAuth === 'login' ? handleLogin : handleCadastro}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {abaAuth === 'login' ? 'Entrar no App ➔' : 'Criar Minha Conta ⚡'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // TELA PRINCIPAL (USUÁRIO AUTENTICADO)
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
-      {/* HEADER */}
+      {/* HEADER COM LOGOUT */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🏋️ Personal AI Coach</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.headerTitle}>🏋️ Personal AI Coach</Text>
+            <Text style={styles.headerUserText}>Olá, {nome || session.user.email} 👋</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+            <Text style={styles.logoutBtnText}>Sair 🚪</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerSubtitle}>
           {faseAtual === 1 && 'Fase 1: Coleta & Anamnese Visual'}
           {faseAtual === 2 && 'Fase 2: Diagnóstico & Validação'}
@@ -238,7 +405,7 @@ export default function App() {
               <Text style={styles.cardTitle}>📋 Dados Biométricos</Text>
 
               <Text style={styles.label}>Nome Completo</Text>
-              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: John Doe" placeholderTextColor="#64748b" />
+              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor="#64748b" />
 
               <View style={styles.row}>
                 <View style={styles.halfInput}>
@@ -476,10 +643,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
   header: { padding: 20, backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155' },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#f8fafc' },
-  headerSubtitle: { fontSize: 13, color: '#94a3b8', marginTop: 4 },
+  headerUserText: { fontSize: 13, color: '#38bdf8', fontWeight: '600' },
+  headerSubtitle: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
+  logoutBtn: { backgroundColor: '#334155', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  logoutBtnText: { color: '#f8fafc', fontSize: 12, fontWeight: 'bold' },
   scrollContent: { padding: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#94a3b8', marginTop: 12, fontSize: 14 },
+  authCard: { backgroundColor: '#1e293b', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: '#334155' },
+  authLogo: { fontSize: 28, fontWeight: 'bold', color: '#38bdf8', textAlign: 'center', marginBottom: 6 },
+  authSubtitle: { fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 20 },
+  authTabContainer: { flexDirection: 'row', backgroundColor: '#0f172a', borderRadius: 8, padding: 4, marginBottom: 20 },
+  authTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6 },
+  authTabActive: { backgroundColor: '#0284c7' },
+  authTabText: { color: '#94a3b8', fontSize: 14, fontWeight: 'bold' },
+  authTabTextActive: { color: '#ffffff' },
   card: { backgroundColor: '#1e293b', padding: 18, borderRadius: 12, borderWidth: 1, borderColor: '#334155' },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#f8fafc', marginBottom: 15 },
   label: { fontSize: 13, fontWeight: '600', color: '#cbd5e1', marginBottom: 6 },
