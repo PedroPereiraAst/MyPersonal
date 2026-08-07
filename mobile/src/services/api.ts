@@ -45,6 +45,16 @@ export async function executarLoginApi(
   return response.json();
 }
 
+export async function buscarMeusTreinos(userId: string): Promise<any[]> {
+  const response = await fetch(`${API_URL}/meus-treinos/${userId}`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao buscar treinos salvos.');
+  }
+  const data = await response.json();
+  return data.treinos || [];
+}
+
 export async function enviarAvaliacaoAnamnese(
   anamnese: AnamneseFormData,
   fotos: ImagemFoto[]

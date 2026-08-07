@@ -21,6 +21,7 @@ import {
   solicitarSubstituicaoExercicio,
   executarCadastroApi,
   executarLoginApi,
+  buscarMeusTreinos,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
@@ -32,9 +33,16 @@ export default function App() {
   const [senhaAuth, setSenhaAuth] = useState('');
   const [carregandoAuth, setCarregandoAuth] = useState(false);
 
+  // Navegação Principal da Aplicação: 'novo' (Formulário + Ficha) vs 'historico' (Meus Treinos Salvos)
+  const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico'>('novo');
+
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
   const [faseAtual, setFaseAtual] = useState<1 | 2 | 3>(1);
   const [carregando, setCarregando] = useState(false);
+
+  // Estado para Lista de Treinos Salvos no Supabase
+  const [treinosSalvos, setTreinosSalvos] = useState<any[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
   // Estado do Formulário de Anamnese
   const [nome, setNome] = useState('');
@@ -65,6 +73,7 @@ export default function App() {
     sessaoIndex: number;
     exercicioIndex: number;
     dados: any;
+    treinoTarget?: any;
   } | null>(null);
   const [motivoTroca, setMotivoTroca] = useState('');
   const [carregandoTroca, setCarregandoTroca] = useState(false);
@@ -91,6 +100,26 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Carregar Histórico de Treinos do Supabase quando a aba 'historico' for aberta
+  useEffect(() => {
+    if (session?.user && abaPrincipal === 'historico') {
+      carregarHistorico();
+    }
+  }, [session, abaPrincipal]);
+
+  const carregarHistorico = async () => {
+    if (!session?.user?.id) return;
+    setCarregandoHistorico(true);
+    try {
+      const treinos = await buscarMeusTreinos(session.user.id);
+      setTreinosSalvos(treinos);
+    } catch (err: any) {
+      console.warn('Alerta ao buscar histórico:', err.message);
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  };
 
   // Executar Login via Rota Backend Confiável
   const handleLogin = async () => {
@@ -133,7 +162,6 @@ export default function App() {
     try {
       const data = await executarCadastroApi(emailAuth, senhaAuth, nome);
       
-      // Realiza o login automático após o cadastro
       try {
         const loginData = await executarLoginApi(emailAuth, senhaAuth);
         if (loginData?.session) {
@@ -167,7 +195,7 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.5, // Compressão de 50% para otimizar envio no Wi-Fi
+      quality: 0.5,
       base64: true,
     });
 
@@ -223,7 +251,7 @@ export default function App() {
     try {
       const avaliacao = await enviarAvaliacaoAnamnese(anamneseData, fotosArray);
       setResultadoAvaliacao(avaliacao);
-      setFaseAtual(2); // Avança para a Fase 2 (Validação do Usuário)
+      setFaseAtual(2);
     } catch (err: any) {
       Alert.alert('Erro na Análise', err.message || 'Falha ao conectar com o servidor.');
     } finally {
@@ -258,7 +286,7 @@ export default function App() {
         resultadoAvaliacao.persistencia?.avaliacaoId
       );
       setResultadoTreino(treino);
-      setFaseAtual(3); // Avança para a Fase 3 (Ficha de Treino Prescrita)
+      setFaseAtual(3);
     } catch (err: any) {
       Alert.alert('Erro ao Prescrever Treino', err.message || 'Falha ao gerar treino.');
     } finally {
@@ -267,15 +295,15 @@ export default function App() {
   };
 
   // Abrir Modal de Substituição de Exercício
-  const handleAbrirModalSubstituicao = (sessaoIndex: number, exercicioIndex: number, dados: any) => {
-    setExercicioParaSubstituir({ sessaoIndex, exercicioIndex, dados });
+  const handleAbrirModalSubstituicao = (sessaoIndex: number, exercicioIndex: number, dados: any, treinoTarget?: any) => {
+    setExercicioParaSubstituir({ sessaoIndex, exercicioIndex, dados, treinoTarget });
     setMotivoTroca('');
     setModalSubstituicaoVisivel(true);
   };
 
   // Executar a Substituição via IA (Gemini 3.6 Flash)
   const handleExecutarSubstituicao = async () => {
-    if (!exercicioParaSubstituir || !resultadoTreino) return;
+    if (!exercicioParaSubstituir) return;
 
     setCarregandoTroca(true);
     try {
@@ -285,12 +313,23 @@ export default function App() {
         motivoTroca
       );
 
-      const novoTreino = JSON.parse(JSON.stringify(resultadoTreino)) as FichaTreino;
-      novoTreino.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
-        exercicioParaSubstituir.exercicioIndex
-      ] = resposta.exercicio_substituto;
+      if (exercicioParaSubstituir.treinoTarget) {
+        const novoTreinoObj = JSON.parse(JSON.stringify(exercicioParaSubstituir.treinoTarget));
+        novoTreinoObj.treino_json.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
+          exercicioParaSubstituir.exercicioIndex
+        ] = resposta.exercicio_substituto;
 
-      setResultadoTreino(novoTreino);
+        setTreinosSalvos((prev) =>
+          prev.map((t) => (t.id === novoTreinoObj.id ? novoTreinoObj : t))
+        );
+      } else if (resultadoTreino) {
+        const novoTreino = JSON.parse(JSON.stringify(resultadoTreino)) as FichaTreino;
+        novoTreino.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
+          exercicioParaSubstituir.exercicioIndex
+        ] = resposta.exercicio_substituto;
+        setResultadoTreino(novoTreino);
+      }
+
       setModalSubstituicaoVisivel(false);
 
       Alert.alert(
@@ -314,7 +353,6 @@ export default function App() {
             <Text style={styles.authLogo}>🏋️ MyPersonal AI</Text>
             <Text style={styles.authSubtitle}>Seu Personal Trainer Inteligente com Visão Computacional</Text>
 
-            {/* TAB TOGGLE ENTRAR / CRIAR CONTA */}
             <View style={styles.authTabContainer}>
               <TouchableOpacity
                 style={[styles.authTab, abaAuth === 'login' && styles.authTabActive]}
@@ -382,12 +420,12 @@ export default function App() {
     );
   }
 
-  // TELA PRINCIPAL (USUÁRIO AUTENTICADO)
+  // TELA PRINCIPAL (USUÁRIO AUTENTICADO COM BARRA DE NAVEGAÇÃO SUPERIOR)
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
-      {/* HEADER COM LOGOUT */}
+      {/* HEADER DE SAUDAÇÃO COM BOTÃO LOGOUT */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
@@ -398,214 +436,300 @@ export default function App() {
             <Text style={styles.logoutBtnText}>Sair 🚪</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.headerSubtitle}>
-          {faseAtual === 1 && 'Fase 1: Coleta & Anamnese Visual'}
-          {faseAtual === 2 && 'Fase 2: Diagnóstico & Validação'}
-          {faseAtual === 3 && 'Fase 3: Sua Ficha de Treino Personalizada'}
-        </Text>
+
+        {/* NAVEGAÇÃO DE ABAS PRINCIPAIS: NOVO TREINO vs MEUS TREINOS */}
+        <View style={styles.mainNavContainer}>
+          <TouchableOpacity
+            style={[styles.mainNavTab, abaPrincipal === 'novo' && styles.mainNavTabActive]}
+            onPress={() => setAbaPrincipal('novo')}
+          >
+            <Text style={[styles.mainNavTabText, abaPrincipal === 'novo' && styles.mainNavTabTextActive]}>
+              🏋️ Novo Treino
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.mainNavTab, abaPrincipal === 'historico' && styles.mainNavTabActive]}
+            onPress={() => setAbaPrincipal('historico')}
+          >
+            <Text style={[styles.mainNavTabText, abaPrincipal === 'historico' && styles.mainNavTabTextActive]}>
+              📁 Meus Treinos Salvos
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* LOADING OVERLAY */}
-      {carregando ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#38bdf8" />
-          <Text style={styles.loadingText}>
-            {faseAtual === 1 ? 'Analisando fotos e biotipo com Gemini AI...' : 'Prescrevendo sua ficha de treino...'}
-          </Text>
-        </View>
-      ) : (
+      {/* ABA 2: MEUS TREINOS SALVOS NO SUPABASE */}
+      {abaPrincipal === 'historico' && (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS */}
-          {faseAtual === 1 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>📋 Dados Biométricos</Text>
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+              <Text style={styles.cardTitle}>📁 Histórico de Treinos Salvos</Text>
+              <TouchableOpacity onPress={carregarHistorico}>
+                <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>🔄 Atualizar</Text>
+              </TouchableOpacity>
+            </View>
 
-              <Text style={styles.label}>Nome Completo</Text>
-              <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor="#64748b" />
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Idade</Text>
-                  <TextInput style={styles.input} value={idade} onChangeText={setIdade} keyboardType="numeric" placeholder="24" placeholderTextColor="#64748b" />
-                </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Peso (kg)</Text>
-                  <TextInput style={styles.input} value={peso} onChangeText={setPeso} keyboardType="numeric" placeholder="78" placeholderTextColor="#64748b" />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Altura (cm)</Text>
-                  <TextInput style={styles.input} value={altura} onChangeText={setAltura} keyboardType="numeric" placeholder="178" placeholderTextColor="#64748b" />
-                </View>
-                <View style={styles.halfInput}>
-                  <Text style={styles.label}>Dias p/ semana</Text>
-                  <TextInput style={styles.input} value={dias} onChangeText={setDias} keyboardType="numeric" placeholder="4" placeholderTextColor="#64748b" />
-                </View>
-              </View>
-
-              {/* SELEÇÃO DO OBJETIVO */}
-              <Text style={[styles.label, { marginTop: 12 }]}>Objetivo Principal:</Text>
-              <View style={styles.chipContainer}>
-                {listaObjetivos.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.chip, objetivo === item && styles.chipActive]}
-                    onPress={() => setObjetivo(item)}
-                  >
-                    <Text style={[styles.chipText, objetivo === item && styles.chipTextActive]}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* SELEÇÃO DO NÍVEL / TEMPO DE TREINO */}
-              <Text style={[styles.label, { marginTop: 12 }]}>Nível / Tempo de Treino:</Text>
-              <View style={styles.chipContainer}>
-                {listaNiveis.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.chip, nivel === item && styles.chipActive]}
-                    onPress={() => setNivel(item)}
-                  >
-                    <Text style={[styles.chipText, nivel === item && styles.chipTextActive]}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* OBSERVAÇÕES E PEDIDOS DE AJUSTE */}
-              <Text style={[styles.label, { marginTop: 12 }]}>Observações / Preferências</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                value={observacoes}
-                onChangeText={setObservacoes}
-                multiline
-                numberOfLines={3}
-                placeholder="Ex: Quero focar mais em glúteos e ombros. Não quero exercícios de braço na sexta-feira."
-                placeholderTextColor="#64748b"
-              />
-
-              {/* REGRA DO NUTRICIONISTA */}
-              <Text style={[styles.label, { marginTop: 15 }]}>Você já passou por consulta com nutricionista?</Text>
-              <View style={styles.rowButtons}>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, passouNutricionista === true && styles.toggleBtnActive]}
-                  onPress={() => setPassouNutricionista(true)}
-                >
-                  <Text style={styles.toggleBtnText}>Sim, já fui</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, passouNutricionista === false && styles.toggleBtnActive]}
-                  onPress={() => setPassouNutricionista(false)}
-                >
-                  <Text style={styles.toggleBtnText}>Não, nunca fui</Text>
-                </TouchableOpacity>
-              </View>
-
-              {passouNutricionista === true && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={styles.label}>Digite seu % de Gordura (BF) do nutricionista:</Text>
-                  <TextInput style={styles.input} value={bfInformado} onChangeText={setBfInformado} keyboardType="numeric" placeholder="Ex: 15" placeholderTextColor="#64748b" />
-                </View>
-              )}
-
-              {passouNutricionista === false && (
-                <Text style={styles.infoText}>
-                  ℹ️ A IA do Gemini utilizará visão computacional nas suas fotos para estimar o seu % de gordura corporal.
+            {carregandoHistorico ? (
+              <ActivityIndicator size="large" color="#38bdf8" style={{ marginVertical: 30 }} />
+            ) : treinosSalvos.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                <Text style={{ fontSize: 32, marginBottom: 10 }}>🏋️‍♂️</Text>
+                <Text style={{ color: '#f8fafc', fontWeight: 'bold', fontSize: 16 }}>Nenhum treino salvo ainda</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', marginTop: 6 }}>
+                  Preencha sua anamnese na aba "Novo Treino" para gerar e salvar sua primeira ficha inteligente!
                 </Text>
+              </View>
+            ) : (
+              treinosSalvos.map((item, idx) => {
+                const tData = item.treino_json?.treino;
+                const dataFormatada = new Date(item.created_at).toLocaleDateString('pt-BR');
+
+                return (
+                  <View key={item.id || idx} style={[styles.sessionCard, { marginBottom: 16 }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.sessionTitle}>Divisão: {item.divisao_nome || tData?.divisao_nome}</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11 }}>📅 {dataFormatada}</Text>
+                    </View>
+                    <Text style={{ color: '#cbd5e1', fontSize: 12, marginBottom: 10 }}>
+                      Frequência: {item.frequencia_semanal || tData?.frequencia_semanal}x por semana
+                    </Text>
+
+                    {tData?.sessoes?.map((sessao: any, sIdx: number) => (
+                      <View key={sIdx} style={{ marginTop: 8 }}>
+                        <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>
+                          {sessao.nome}
+                        </Text>
+                        {sessao.exercicios?.map((ex: any, eIdx: number) => (
+                          <View key={eIdx} style={styles.exerciseBox}>
+                            <View style={styles.exerciseHeader}>
+                              <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
+                              <TouchableOpacity
+                                style={styles.replaceBtn}
+                                onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex, item)}
+                              >
+                                <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
+                              </TouchableOpacity>
+                            </View>
+                            <Text style={styles.exerciseDetails}>
+                              Séries: {ex.series_trabalho} | Reps: {ex.reps} | RIR: {ex.rir_alvo} | Descanso: {ex.descanso_segundos}s
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ABA 1: GERAR NOVO TREINO (FLUXO 3 FASES) */}
+      {abaPrincipal === 'novo' && (
+        <>
+          {carregando ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#38bdf8" />
+              <Text style={styles.loadingText}>
+                {faseAtual === 1 ? 'Analisando fotos e biotipo com Gemini AI...' : 'Prescrevendo sua ficha de treino...'}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS */}
+              {faseAtual === 1 && (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>📋 Dados Biométricos</Text>
+
+                  <Text style={styles.label}>Nome Completo</Text>
+                  <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor="#64748b" />
+
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Idade</Text>
+                      <TextInput style={styles.input} value={idade} onChangeText={setIdade} keyboardType="numeric" placeholder="24" placeholderTextColor="#64748b" />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Peso (kg)</Text>
+                      <TextInput style={styles.input} value={peso} onChangeText={setPeso} keyboardType="numeric" placeholder="78" placeholderTextColor="#64748b" />
+                    </View>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Altura (cm)</Text>
+                      <TextInput style={styles.input} value={altura} onChangeText={setAltura} keyboardType="numeric" placeholder="178" placeholderTextColor="#64748b" />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.label}>Dias p/ semana</Text>
+                      <TextInput style={styles.input} value={dias} onChangeText={setDias} keyboardType="numeric" placeholder="4" placeholderTextColor="#64748b" />
+                    </View>
+                  </View>
+
+                  {/* SELEÇÃO DO OBJETIVO */}
+                  <Text style={[styles.label, { marginTop: 12 }]}>Objetivo Principal:</Text>
+                  <View style={styles.chipContainer}>
+                    {listaObjetivos.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[styles.chip, objetivo === item && styles.chipActive]}
+                        onPress={() => setObjetivo(item)}
+                      >
+                        <Text style={[styles.chipText, objetivo === item && styles.chipTextActive]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* SELEÇÃO DO NÍVEL / TEMPO DE TREINO */}
+                  <Text style={[styles.label, { marginTop: 12 }]}>Nível / Tempo de Treino:</Text>
+                  <View style={styles.chipContainer}>
+                    {listaNiveis.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[styles.chip, nivel === item && styles.chipActive]}
+                        onPress={() => setNivel(item)}
+                      >
+                        <Text style={[styles.chipText, nivel === item && styles.chipTextActive]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* OBSERVAÇÕES E PEDIDOS DE AJUSTE */}
+                  <Text style={[styles.label, { marginTop: 12 }]}>Observações / Preferências</Text>
+                  <TextInput
+                    style={[styles.input, styles.multilineInput]}
+                    value={observacoes}
+                    onChangeText={setObservacoes}
+                    multiline
+                    numberOfLines={3}
+                    placeholder="Ex: Quero focar mais em glúteos e ombros. Não quero exercícios de braço na sexta-feira."
+                    placeholderTextColor="#64748b"
+                  />
+
+                  {/* REGRA DO NUTRICIONISTA */}
+                  <Text style={[styles.label, { marginTop: 15 }]}>Você já passou por consulta com nutricionista?</Text>
+                  <View style={styles.rowButtons}>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, passouNutricionista === true && styles.toggleBtnActive]}
+                      onPress={() => setPassouNutricionista(true)}
+                    >
+                      <Text style={styles.toggleBtnText}>Sim, já fui</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, passouNutricionista === false && styles.toggleBtnActive]}
+                      onPress={() => setPassouNutricionista(false)}
+                    >
+                      <Text style={styles.toggleBtnText}>Não, nunca fui</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {passouNutricionista === true && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={styles.label}>Digite seu % de Gordura (BF) do nutricionista:</Text>
+                      <TextInput style={styles.input} value={bfInformado} onChangeText={setBfInformado} keyboardType="numeric" placeholder="Ex: 15" placeholderTextColor="#64748b" />
+                    </View>
+                  )}
+
+                  {passouNutricionista === false && (
+                    <Text style={styles.infoText}>
+                      ℹ️ A IA do Gemini utilizará visão computacional nas suas fotos para estimar o seu % de gordura corporal.
+                    </Text>
+                  )}
+
+                  {/* UPLOAD DE FOTOS */}
+                  <Text style={[styles.cardTitle, { marginTop: 25 }]}>📸 Fotos Corporais</Text>
+
+                  <View style={styles.photoContainer}>
+                    {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
+                      <TouchableOpacity key={tipo} style={styles.photoBox} onPress={() => selecionarFoto(tipo)}>
+                        {fotos[tipo] ? (
+                          <Image source={{ uri: fotos[tipo]?.uri }} style={styles.photoPreview} />
+                        ) : (
+                          <Text style={styles.photoBoxText}>+ Foto {tipo.toUpperCase()}</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity style={styles.primaryButton} onPress={handleSubmeterAnamnese}>
+                    <Text style={styles.primaryButtonText}>Analisar com IA Multimodal ➔</Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
-              {/* UPLOAD DE FOTOS */}
-              <Text style={[styles.cardTitle, { marginTop: 25 }]}>📸 Fotos Corporais</Text>
+              {/* FASE 2: VALIDAÇÃO DO DIAGNÓSTICO DA IA */}
+              {faseAtual === 2 && resultadoAvaliacao && (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>📊 Diagnóstico Visual da IA</Text>
 
-              <View style={styles.photoContainer}>
-                {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
-                  <TouchableOpacity key={tipo} style={styles.photoBox} onPress={() => selecionarFoto(tipo)}>
-                    {fotos[tipo] ? (
-                      <Image source={{ uri: fotos[tipo]?.uri }} style={styles.photoPreview} />
-                    ) : (
-                      <Text style={styles.photoBoxText}>+ Foto {tipo.toUpperCase()}</Text>
-                    )}
+                  <View style={styles.highlightBadge}>
+                    <Text style={styles.highlightText}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
+                  </View>
+
+                  <Text style={styles.sectionHeader}>💪 Pontos Fortes:</Text>
+                  {resultadoAvaliacao.avaliacao.pontos_fortes.map((pf, idx) => (
+                    <Text key={idx} style={styles.listItem}>• {pf}</Text>
+                  ))}
+
+                  <Text style={styles.sectionHeader}>🎯 Pontos Fracos (Prioridade de Treino):</Text>
+                  {resultadoAvaliacao.avaliacao.pontos_fracos.map((pf, idx) => (
+                    <Text key={idx} style={styles.listItem}>• {pf}</Text>
+                  ))}
+
+                  <Text style={styles.sectionHeader}>🔍 Observações Posturais:</Text>
+                  <Text style={styles.bodyText}>{resultadoAvaliacao.avaliacao.postura_observacoes}</Text>
+
+                  <Text style={styles.sectionHeader}>💬 Mensagem da IA:</Text>
+                  <Text style={styles.bodyText}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
+
+                  <TouchableOpacity style={styles.primaryButton} onPress={handleConfirmarEGerarTreino}>
+                    <Text style={styles.primaryButtonText}>Concordo 100% / Gerar Treino ⚡</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                </View>
+              )}
 
-              <TouchableOpacity style={styles.primaryButton} onPress={handleSubmeterAnamnese}>
-                <Text style={styles.primaryButtonText}>Analisar com IA Multimodal ➔</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+              {/* FASE 3: FICHA DE TREINO PRESCRITA */}
+              {faseAtual === 3 && resultadoTreino && (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>🏋️ Ficha de Treino Prescrita</Text>
+                  <Text style={styles.headerSubtitle}>Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana</Text>
 
-          {/* FASE 2: VALIDAÇÃO DO DIAGNÓSTICO DA IA */}
-          {faseAtual === 2 && resultadoAvaliacao && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>📊 Diagnóstico Visual da IA</Text>
+                  {resultadoTreino.treino.sessoes.map((sessao, sIdx) => (
+                    <View key={sIdx} style={styles.sessionCard}>
+                      <Text style={styles.sessionTitle}>{sessao.nome}</Text>
 
-              <View style={styles.highlightBadge}>
-                <Text style={styles.highlightText}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
-              </View>
+                      {sessao.exercicios.map((ex, eIdx) => (
+                        <View key={eIdx} style={styles.exerciseBox}>
+                          <View style={styles.exerciseHeader}>
+                            <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
+                            <TouchableOpacity
+                              style={styles.replaceBtn}
+                              onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex)}
+                            >
+                              <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
+                            </TouchableOpacity>
+                          </View>
 
-              <Text style={styles.sectionHeader}>💪 Pontos Fortes:</Text>
-              {resultadoAvaliacao.avaliacao.pontos_fortes.map((pf, idx) => (
-                <Text key={idx} style={styles.listItem}>• {pf}</Text>
-              ))}
-
-              <Text style={styles.sectionHeader}>🎯 Pontos Fracos (Prioridade de Treino):</Text>
-              {resultadoAvaliacao.avaliacao.pontos_fracos.map((pf, idx) => (
-                <Text key={idx} style={styles.listItem}>• {pf}</Text>
-              ))}
-
-              <Text style={styles.sectionHeader}>🔍 Observações Posturais:</Text>
-              <Text style={styles.bodyText}>{resultadoAvaliacao.avaliacao.postura_observacoes}</Text>
-
-              <Text style={styles.sectionHeader}>💬 Mensagem da IA:</Text>
-              <Text style={styles.bodyText}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
-
-              <TouchableOpacity style={styles.primaryButton} onPress={handleConfirmarEGerarTreino}>
-                <Text style={styles.primaryButtonText}>Concordo 100% / Gerar Treino ⚡</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* FASE 3: FICHA DE TREINO PRESCRITA */}
-          {faseAtual === 3 && resultadoTreino && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🏋️ Ficha de Treino Prescrita</Text>
-              <Text style={styles.headerSubtitle}>Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana</Text>
-
-              {resultadoTreino.treino.sessoes.map((sessao, sIdx) => (
-                <View key={sIdx} style={styles.sessionCard}>
-                  <Text style={styles.sessionTitle}>{sessao.nome}</Text>
-
-                  {sessao.exercicios.map((ex, eIdx) => (
-                    <View key={eIdx} style={styles.exerciseBox}>
-                      <View style={styles.exerciseHeader}>
-                        <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
-                        <TouchableOpacity
-                          style={styles.replaceBtn}
-                          onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex)}
-                        >
-                          <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <Text style={styles.exerciseDetails}>
-                        Séries: {ex.series_trabalho} (Aquecimento: {ex.series_aquecimento}) | Reps: {ex.reps} | RIR: {ex.rir_alvo}
-                      </Text>
-                      <Text style={styles.exerciseDetails}>
-                        Descanso: {ex.descanso_segundos}s | Cadência: {ex.foco_biomecanico}
-                      </Text>
+                          <Text style={styles.exerciseDetails}>
+                            Séries: {ex.series_trabalho} (Aquecimento: {ex.series_aquecimento}) | Reps: {ex.reps} | RIR: {ex.rir_alvo}
+                          </Text>
+                          <Text style={styles.exerciseDetails}>
+                            Descanso: {ex.descanso_segundos}s | Cadência: {ex.foco_biomecanico}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
                   ))}
-                </View>
-              ))}
 
-              <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#475569' }]} onPress={() => setFaseAtual(1)}>
-                <Text style={styles.primaryButtonText}>↺ Fazer Nova Anamnese</Text>
-              </TouchableOpacity>
-            </View>
+                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#475569' }]} onPress={() => setFaseAtual(1)}>
+                    <Text style={styles.primaryButtonText}>↺ Fazer Nova Anamnese</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
           )}
-        </ScrollView>
+        </>
       )}
 
       {/* MODAL DE SUBSTITUIÇÃO DE EXERCÍCIO */}
@@ -657,12 +781,17 @@ export default function App() {
 // ESTILOS VISUAIS E AESTHETICS (DARK MODE MODERNO)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
-  header: { padding: 20, backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155' },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#f8fafc' },
+  header: { padding: 16, backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#f8fafc' },
   headerUserText: { fontSize: 13, color: '#38bdf8', fontWeight: '600' },
   headerSubtitle: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
   logoutBtn: { backgroundColor: '#334155', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   logoutBtnText: { color: '#f8fafc', fontSize: 12, fontWeight: 'bold' },
+  mainNavContainer: { flexDirection: 'row', backgroundColor: '#0f172a', borderRadius: 8, padding: 4, marginTop: 12 },
+  mainNavTab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
+  mainNavTabActive: { backgroundColor: '#0284c7' },
+  mainNavTabText: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold' },
+  mainNavTabTextActive: { color: '#ffffff' },
   scrollContent: { padding: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#94a3b8', marginTop: 12, fontSize: 14 },

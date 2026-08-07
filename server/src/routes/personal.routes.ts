@@ -46,6 +46,23 @@ export async function personalRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: error.message || 'Email ou senha inválidos.' });
     }
   });
+
+  /**
+   * ROTA PARA CONSULTAR HISTÓRICO DE TREINOS SALVOS
+   * GET /api/meus-treinos/:userId
+   */
+  fastify.get<{
+    Params: { userId: string };
+  }>('/meus-treinos/:userId', async (request, reply) => {
+    try {
+      const { userId } = request.params;
+      const treinos = await SupabaseService.buscarTreinosDoUsuario(userId);
+      return reply.status(200).send({ treinos });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Erro ao buscar histórico de treinos.' });
+    }
+  });
   
   /**
    * ROTA 1: FASE 1 - Avaliação Física via Fotos + Anamnese

@@ -23,7 +23,6 @@ export class SupabaseService {
     const client = getSupabaseClient();
     if (!client) throw new Error('Supabase não configurado no servidor.');
 
-    // Tenta criar usuário via Admin (Auto-confirma email)
     const { data, error } = await client.auth.admin.createUser({
       email,
       password: senha,
@@ -32,7 +31,6 @@ export class SupabaseService {
     });
 
     if (error) {
-      // Se admin.createUser retornar erro (ex: fallback para signUp padrão)
       const { data: signUpData, error: signUpError } = await client.auth.signUp({
         email,
         password: senha,
@@ -60,6 +58,31 @@ export class SupabaseService {
 
     if (error) throw error;
     return data;
+  }
+
+  /**
+   * Buscar Histórico de Treinos do Usuário no PostgreSQL do Supabase
+   */
+  static async buscarTreinosDoUsuario(userId: string) {
+    try {
+      const client = getSupabaseClient();
+      if (!client) return [];
+
+      const { data: treinos, error } = await client
+        .from('treinos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('⚠️ Alerta ao buscar treinos do usuário:', error.message);
+        return [];
+      }
+
+      return treinos || [];
+    } catch (err: any) {
+      console.warn('⚠️ Alerta ao buscar treinos:', err.message);
+      return [];
+    }
   }
 
   /**
