@@ -154,7 +154,12 @@ export default function App() {
 
     setCarregando(true);
     try {
-      const treino = await solicitarGeracaoTreino(anamneseData, resultadoAvaliacao.avaliacao);
+      const treino = await solicitarGeracaoTreino(
+        anamneseData,
+        resultadoAvaliacao.avaliacao,
+        resultadoAvaliacao.persistencia?.alunoId,
+        resultadoAvaliacao.persistencia?.avaliacaoId
+      );
       setResultadoTreino(treino);
       setFaseAtual(3); // Avança para a Fase 3 (Ficha de Treino Prescrita)
     } catch (err: any) {

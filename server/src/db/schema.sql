@@ -1,12 +1,12 @@
 -- ==========================================
--- ESTRUTURA DO BANCO DE DADOS SUPABASE (POSTGRESQL)
+-- ESTRUTURA E PERMISSÕES DO BANCO DE DADOS SUPABASE (POSTGRESQL)
 -- Cole este script no SQL Editor do Supabase Dashboard
 -- ==========================================
 
 -- 1. Tabela de Alunos (Preparada para vinculo de Login futuro via user_id)
 CREATE TABLE IF NOT EXISTS public.alunos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID, -- Chave para vincular com Supabase Auth (Login) no futuro
+  user_id UUID,
   nome TEXT NOT NULL,
   idade INT NOT NULL,
   peso NUMERIC(5,2) NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.alunos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Tabela de Avaliações Físicas (Sem armazenamento de imagens corporais por ética/LGPD)
+-- 2. Tabela de Avaliações Físicas (Métricas e Diagnósticos)
 CREATE TABLE IF NOT EXISTS public.avaliacoes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   aluno_id UUID REFERENCES public.alunos(id) ON DELETE CASCADE,
@@ -36,15 +36,15 @@ CREATE TABLE IF NOT EXISTS public.treinos (
   aluno_id UUID REFERENCES public.alunos(id) ON DELETE CASCADE,
   divisao_nome TEXT NOT NULL,
   frequencia_semanal INT NOT NULL,
-  treino_json JSONB NOT NULL, -- Armazena a ficha completa de treino em JSONB (com sessões e exercícios)
+  treino_json JSONB NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Habilitar Row Level Security (RLS) para permitir acesso seguro via Service Role
-ALTER TABLE public.alunos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.avaliacoes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.treinos ENABLE ROW LEVEL SECURITY;
+-- Liberar permissões de acesso total (GRANT ALL) para gravação via API sem bloqueios de RLS
+ALTER TABLE public.alunos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.avaliacoes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.treinos DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Permitir tudo para a Service Role" ON public.alunos FOR ALL USING (true);
-CREATE POLICY "Permitir tudo para a Service Role" ON public.avaliacoes FOR ALL USING (true);
-CREATE POLICY "Permitir tudo para a Service Role" ON public.treinos FOR ALL USING (true);
+GRANT ALL ON TABLE public.alunos TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.avaliacoes TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.treinos TO anon, authenticated, service_role;

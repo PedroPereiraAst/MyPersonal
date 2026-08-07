@@ -38,7 +38,9 @@ export async function enviarAvaliacaoAnamnese(
 
 export async function solicitarGeracaoTreino(
   anamnese: AnamneseFormData,
-  avaliacao: AvaliacaoFisica['avaliacao']
+  avaliacao: AvaliacaoFisica['avaliacao'],
+  alunoId?: string,
+  avaliacaoId?: string
 ): Promise<FichaTreino> {
   const response = await fetch(`${API_URL}/gerar-treino`, {
     method: 'POST',
@@ -48,6 +50,8 @@ export async function solicitarGeracaoTreino(
     body: JSON.stringify({
       anamnese,
       avaliacao,
+      alunoId,
+      avaliacaoId,
     }),
   });
 

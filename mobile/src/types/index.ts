@@ -31,6 +31,10 @@ export interface AvaliacaoFisica {
     postura_observacoes: string;
     mensagem_validacao: string;
   };
+  persistencia?: {
+    alunoId: string;
+    avaliacaoId: string;
+  };
 }
 
 export interface FichaTreino {
