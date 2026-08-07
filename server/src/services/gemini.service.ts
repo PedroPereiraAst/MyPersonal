@@ -86,7 +86,7 @@ Instruções para a Avaliação:
 
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: [promptText, ...imageParts],
       config: {
         responseMimeType: 'application/json',
@@ -134,7 +134,7 @@ Instruções para a Prescrição:
 
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: [promptText],
       config: {
         responseMimeType: 'application/json',
