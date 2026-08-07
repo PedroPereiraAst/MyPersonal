@@ -1,30 +1,38 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import { GoogleGenAI } from '@google/genai';
+import { GeminiService } from './services/gemini.service.js';
 
-const apiKey = process.env.GEMINI_API_KEY;
-console.log('🔑 Testando chave:', apiKey ? apiKey.substring(0, 10) + '...' : 'vazia');
-
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
-
-async function testModel(modelName: string) {
+async function testFullService() {
   try {
-    console.log(`\n⏳ Testando modelo: ${modelName}...`);
-    const res = await ai.models.generateContent({
-      model: modelName,
-      contents: 'Olá! Responda apenas OK.',
-    });
-    console.log(`✅ SUCESSO com ${modelName}! Resposta:`, res.text);
-    return true;
+    console.log('⏳ Testando GeminiService com o modelo:', process.env.GEMINI_MODEL);
+    
+    // Foto fictícia em base64 minimalista (pixel transparente 1x1 png) para teste
+    const fotoMock = {
+      mimeType: 'image/png',
+      base64Data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    };
+
+    const anamneseMock = {
+      nome: 'Pedro Teste',
+      idade: 24,
+      peso: 78,
+      altura: 178,
+      objetivo: 'Hipertrofia',
+      nivel_experiencia: 'Intermediario',
+      dias_disponiveis: 4,
+      passou_nutricionista: false,
+      autoriza_estimativa_bf: true,
+    };
+
+    console.log('🚀 Enviando requisição de teste para o Gemini...');
+    const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamneseMock, [fotoMock]);
+
+    console.log('✅ SUCESSO ABSOLUTO! Resposta da IA com JSON Schema:');
+    console.log(JSON.stringify(avaliacao, null, 2));
+
   } catch (err: any) {
-    console.error(`❌ Erro no modelo ${modelName}:`, err.message);
-    return false;
+    console.error('❌ Erro no GeminiService:', err.message);
   }
 }
 
-async function run() {
-  await testModel('gemini-2.0-flash');
-  await testModel('gemini-1.5-flash');
-}
-
-run();
+testFullService();
