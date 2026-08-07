@@ -7,7 +7,9 @@ import { personalRoutes } from "./routes/personal.routes.js";
 
 const app = Fastify({
     logger: true,
+    bodyLimit: 30 * 1024 * 1024, // 30 MB para aceitar upload de fotos base64
 });
+
 
 // Habilita CORS para permitir conexões do aplicativo mobile no celular e web
 await app.register(cors, {

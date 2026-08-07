@@ -28,7 +28,9 @@ export async function enviarAvaliacaoAnamnese(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Erro ao enviar avaliação para a API.');
+    const mensagemErro = errorData.details || errorData.error || `Erro HTTP ${response.status}`;
+    console.error('❌ Erro na resposta da API /avaliar:', mensagemErro);
+    throw new Error(mensagemErro);
   }
 
   return response.json();
@@ -51,7 +53,9 @@ export async function solicitarGeracaoTreino(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Erro ao gerar ficha de treino.');
+    const mensagemErro = errorData.details || errorData.error || `Erro HTTP ${response.status}`;
+    console.error('❌ Erro na resposta da API /gerar-treino:', mensagemErro);
+    throw new Error(mensagemErro);
   }
 
   return response.json();

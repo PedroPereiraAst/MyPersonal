@@ -48,9 +48,10 @@ export default function App() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.7,
+      quality: 0.5, // Compressão de 50% para otimizar envio no Wi-Fi
       base64: true,
     });
+
 
     if (!result.canceled && result.assets[0].base64) {
       const asset = result.assets[0];
