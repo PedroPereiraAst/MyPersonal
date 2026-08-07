@@ -1,8 +1,12 @@
+import Constants from 'expo-constants';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from '../types/index';
 
-// No emulador Android, a máquina local (localhost) é acessada pelo IP 10.0.2.2 ou pelo seu IP na rede local.
-// No emulador iOS ou Web, 'http://localhost:3333/api' funciona diretamente.
-const API_URL = 'http://localhost:3333/api';
+// Detecta o IP da sua máquina automaticamente quando o app roda no celular físico via Expo Go (Wi-Fi)
+const debuggerHost = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
+const host = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
+const API_URL = `http://${host}:3333/api`;
+
+console.log('🔗 Conectando na API Backend:', API_URL);
 
 export async function enviarAvaliacaoAnamnese(
   anamnese: AnamneseFormData,
