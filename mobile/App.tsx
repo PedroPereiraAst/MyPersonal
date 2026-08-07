@@ -19,6 +19,8 @@ import {
   enviarAvaliacaoAnamnese,
   solicitarGeracaoTreino,
   solicitarSubstituicaoExercicio,
+  executarCadastroApi,
+  executarLoginApi,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
@@ -90,7 +92,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Executar Login
+  // Executar Login via Rota Backend Confiável
   const handleLogin = async () => {
     if (!emailAuth || !senhaAuth) {
       Alert.alert('Campos Obrigatórios', 'Por favor, preencha seu Email e Senha.');
@@ -98,18 +100,24 @@ export default function App() {
     }
 
     setCarregandoAuth(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: emailAuth,
-      password: senhaAuth,
-    });
-    setCarregandoAuth(false);
-
-    if (error) {
-      Alert.alert('Erro ao Entrar', error.message);
+    try {
+      const data = await executarLoginApi(emailAuth, senhaAuth);
+      if (data?.session) {
+        await supabase.auth.setSession(data.session);
+        setSession(data.session);
+        setNome(data.user?.user_metadata?.nome || emailAuth.split('@')[0]);
+      } else {
+        setSession({ user: data.user || { email: emailAuth } });
+        setNome(data.user?.user_metadata?.nome || emailAuth.split('@')[0]);
+      }
+    } catch (err: any) {
+      Alert.alert('Erro ao Entrar', err.message || 'Email ou senha inválidos.');
+    } finally {
+      setCarregandoAuth(false);
     }
   };
 
-  // Executar Cadastro
+  // Executar Cadastro via Rota Backend Confiável (com Auto-Confirmação)
   const handleCadastro = async () => {
     if (!emailAuth || !senhaAuth || !nome) {
       Alert.alert('Campos Obrigatórios', 'Por favor, preencha Nome, Email e Senha.');
@@ -122,19 +130,27 @@ export default function App() {
     }
 
     setCarregandoAuth(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: emailAuth,
-      password: senhaAuth,
-      options: {
-        data: { nome },
-      },
-    });
-    setCarregandoAuth(false);
+    try {
+      const data = await executarCadastroApi(emailAuth, senhaAuth, nome);
+      
+      // Realiza o login automático após o cadastro
+      try {
+        const loginData = await executarLoginApi(emailAuth, senhaAuth);
+        if (loginData?.session) {
+          await supabase.auth.setSession(loginData.session);
+          setSession(loginData.session);
+        } else {
+          setSession({ user: data.user || { email: emailAuth } });
+        }
+      } catch {
+        setSession({ user: data.user || { email: emailAuth } });
+      }
 
-    if (error) {
-      Alert.alert('Erro no Cadastro', error.message);
-    } else {
       Alert.alert('Conta Criada com Sucesso!', 'Sua conta foi cadastrada e você já está logado!');
+    } catch (err: any) {
+      Alert.alert('Erro no Cadastro', err.message || 'Falha ao criar conta.');
+    } finally {
+      setCarregandoAuth(false);
     }
   };
 

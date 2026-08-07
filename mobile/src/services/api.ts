@@ -8,6 +8,43 @@ const API_URL = `http://${host}:3333/api`;
 
 console.log('🔗 Conectando na API Backend:', API_URL);
 
+export async function executarCadastroApi(
+  email: string,
+  senha: string,
+  nome: string
+): Promise<any> {
+  const response = await fetch(`${API_URL}/auth/cadastro`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, senha, nome }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao realizar cadastro.');
+  }
+
+  return response.json();
+}
+
+export async function executarLoginApi(
+  email: string,
+  senha: string
+): Promise<any> {
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, senha }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Email ou senha inválidos.');
+  }
+
+  return response.json();
+}
+
 export async function enviarAvaliacaoAnamnese(
   anamnese: AnamneseFormData,
   fotos: ImagemFoto[]

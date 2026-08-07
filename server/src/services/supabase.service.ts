@@ -17,18 +17,59 @@ function getSupabaseClient(): SupabaseClient | null {
 
 export class SupabaseService {
   /**
+   * Cadastrar Usuário com Auto-Confirmação de Email no Supabase Auth
+   */
+  static async cadastrarUsuario(email: string, senha: string, nome: string) {
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase não configurado no servidor.');
+
+    // Tenta criar usuário via Admin (Auto-confirma email)
+    const { data, error } = await client.auth.admin.createUser({
+      email,
+      password: senha,
+      user_metadata: { nome },
+      email_confirm: true,
+    });
+
+    if (error) {
+      // Se admin.createUser retornar erro (ex: fallback para signUp padrão)
+      const { data: signUpData, error: signUpError } = await client.auth.signUp({
+        email,
+        password: senha,
+        options: { data: { nome } },
+      });
+
+      if (signUpError) throw signUpError;
+      return signUpData;
+    }
+
+    return data;
+  }
+
+  /**
+   * Fazer Login de Usuário no Supabase Auth
+   */
+  static async loginUsuario(email: string, senha: string) {
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase não configurado no servidor.');
+
+    const { data, error } = await client.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
    * Salvar Aluno e Avaliação no PostgreSQL do Supabase
-   * (IMPORTANTE: Fotos NÃO são salvas em lugar nenhum por razões éticas e de privacidade/LGPD)
    */
   static async salvarAvaliacao(anamnese: any, avaliacao: any) {
     try {
       const client = getSupabaseClient();
-      if (!client) {
-        console.log('ℹ️ Supabase não configurado. Pulando gravação no banco.');
-        return null;
-      }
+      if (!client) return null;
 
-      // 1. Inserir Aluno
       const { data: aluno, error: errAluno } = await client
         .from('alunos')
         .insert({
@@ -47,7 +88,6 @@ export class SupabaseService {
         return null;
       }
 
-      // 2. Inserir Avaliação (Apenas métricas numéricas e diagnósticos textuais)
       const { data: registroAvaliacao, error: errAvaliacao } = await client
         .from('avaliacoes')
         .insert({
@@ -80,10 +120,7 @@ export class SupabaseService {
   static async salvarTreino(treino: any, avaliacaoId?: string, alunoId?: string) {
     try {
       const client = getSupabaseClient();
-      if (!client) {
-        console.log('ℹ️ Supabase não configurado. Pulando gravação do treino.');
-        return null;
-      }
+      if (!client) return null;
 
       const { data, error } = await client
         .from('treinos')

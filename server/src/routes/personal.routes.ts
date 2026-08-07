@@ -4,11 +4,52 @@ import { SupabaseService } from '../services/supabase.service.js';
 import type { AvaliacaoFisica, ExercicioItem } from '../types/schemas.js';
 
 export async function personalRoutes(fastify: FastifyInstance) {
+
+  /**
+   * ROTA DE CADASTRO (SUPABASE AUTH VIA SERVIDOR)
+   * POST /api/auth/cadastro
+   */
+  fastify.post<{
+    Body: { email: string; senha: string; nome: string };
+  }>('/auth/cadastro', async (request, reply) => {
+    try {
+      const { email, senha, nome } = request.body;
+      if (!email || !senha || !nome) {
+        return reply.status(400).send({ error: 'Nome, email e senha são obrigatórios.' });
+      }
+
+      const resultado = await SupabaseService.cadastrarUsuario(email, senha, nome);
+      return reply.status(200).send(resultado);
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(400).send({ error: error.message || 'Erro ao realizar cadastro.' });
+    }
+  });
+
+  /**
+   * ROTA DE LOGIN (SUPABASE AUTH VIA SERVIDOR)
+   * POST /api/auth/login
+   */
+  fastify.post<{
+    Body: { email: string; senha: string };
+  }>('/auth/login', async (request, reply) => {
+    try {
+      const { email, senha } = request.body;
+      if (!email || !senha) {
+        return reply.status(400).send({ error: 'Email e senha são obrigatórios.' });
+      }
+
+      const resultado = await SupabaseService.loginUsuario(email, senha);
+      return reply.status(200).send(resultado);
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(400).send({ error: error.message || 'Email ou senha inválidos.' });
+    }
+  });
   
   /**
    * ROTA 1: FASE 1 - Avaliação Física via Fotos + Anamnese
    * POST /api/avaliar
-   * (PROTOCOLO DE PRIVACIDADE: Fotos são processadas estritamente em RAM e descartadas)
    */
   fastify.post<{
     Body: {
@@ -28,12 +69,11 @@ export async function personalRoutes(fastify: FastifyInstance) {
       // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
       const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
 
-      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante), garantindo resposta em tempo recorde para o celular
+      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante)
       SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao).catch((err) => {
         console.warn('⚠️ Alerta não-bloqueante ao salvar no Supabase:', err.message);
       });
 
-      // Retorna o diagnóstico para a tela do aplicativo imediatamente!
       return reply.status(200).send(avaliacao);
     } catch (error: any) {
       fastify.log.error(error);
