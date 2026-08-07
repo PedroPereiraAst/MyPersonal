@@ -84,9 +84,10 @@ Instruções para a Avaliação:
       },
     }));
 
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: modelName,
       contents: [promptText, ...imageParts],
       config: {
         responseMimeType: 'application/json',
@@ -94,6 +95,7 @@ Instruções para a Avaliação:
         temperature: 0.2,
       },
     });
+
 
     if (!response.text) {
       throw new Error('Falha ao obter resposta da API do Gemini para a Avaliação Física.');
@@ -132,9 +134,10 @@ Instruções para a Prescrição:
 3. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
 `;
 
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const ai = getAIClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: modelName,
       contents: [promptText],
       config: {
         responseMimeType: 'application/json',
@@ -142,6 +145,7 @@ Instruções para a Prescrição:
         temperature: 0.3,
       },
     });
+
 
     if (!response.text) {
       throw new Error('Falha ao obter resposta da API do Gemini para a Ficha de Treino.');
