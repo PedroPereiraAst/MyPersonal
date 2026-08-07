@@ -48,7 +48,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * ROTA PARA CONSULTAR HISTÓRICO DE TREINOS SALVOS
+   * ROTA PARA CONSULTAR O TREINO ATIVO DO USUÁRIO
    * GET /api/meus-treinos/:userId
    */
   fastify.get<{
@@ -56,11 +56,11 @@ export async function personalRoutes(fastify: FastifyInstance) {
   }>('/meus-treinos/:userId', async (request, reply) => {
     try {
       const { userId } = request.params;
-      const treinos = await SupabaseService.buscarTreinosDoUsuario(userId);
-      return reply.status(200).send({ treinos });
+      const treinoAtivo = await SupabaseService.buscarTreinoAtivoDoUsuario(userId);
+      return reply.status(200).send({ treinoAtivo });
     } catch (error: any) {
       fastify.log.error(error);
-      return reply.status(500).send({ error: 'Erro ao buscar histórico de treinos.' });
+      return reply.status(500).send({ error: 'Erro ao buscar treino ativo.' });
     }
   });
   

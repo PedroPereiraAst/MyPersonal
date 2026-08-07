@@ -61,27 +61,27 @@ export class SupabaseService {
   }
 
   /**
-   * Buscar Histórico de Treinos do Usuário no PostgreSQL do Supabase
+   * Buscar Ficha de Treino Ativa Única do Usuário no PostgreSQL do Supabase
    */
-  static async buscarTreinosDoUsuario(userId: string) {
+  static async buscarTreinoAtivoDoUsuario(userId: string) {
     try {
       const client = getSupabaseClient();
-      if (!client) return [];
+      if (!client) return null;
 
       const { data: treinos, error } = await client
         .from('treinos')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error) {
-        console.warn('⚠️ Alerta ao buscar treinos do usuário:', error.message);
-        return [];
+      if (error || !treinos || treinos.length === 0) {
+        return null;
       }
 
-      return treinos || [];
+      return treinos[0];
     } catch (err: any) {
-      console.warn('⚠️ Alerta ao buscar treinos:', err.message);
-      return [];
+      console.warn('⚠️ Alerta ao buscar treino ativo:', err.message);
+      return null;
     }
   }
 

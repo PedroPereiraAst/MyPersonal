@@ -21,7 +21,7 @@ import {
   solicitarSubstituicaoExercicio,
   executarCadastroApi,
   executarLoginApi,
-  buscarMeusTreinos,
+  buscarTreinoAtivo,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
@@ -33,16 +33,17 @@ export default function App() {
   const [senhaAuth, setSenhaAuth] = useState('');
   const [carregandoAuth, setCarregandoAuth] = useState(false);
 
-  // Navegação Principal da Aplicação: 'novo' (Formulário + Ficha) vs 'historico' (Meus Treinos Salvos)
+  // Navegação Principal da Aplicação: 'novo' (Formulário + Ficha) vs 'historico' (Meu Treino Ativo)
   const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico'>('novo');
 
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
   const [faseAtual, setFaseAtual] = useState<1 | 2 | 3>(1);
   const [carregando, setCarregando] = useState(false);
 
-  // Estado para Lista de Treinos Salvos no Supabase
-  const [treinosSalvos, setTreinosSalvos] = useState<any[]>([]);
+  // Estado para o Único Treino Ativo do Usuário no Supabase
+  const [treinoAtivoSalvo, setTreinoAtivoSalvo] = useState<any | null>(null);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [sessaoAtivaIndex, setSessaoAtivaIndex] = useState<number>(0);
 
   // Estado do Formulário de Anamnese
   const [nome, setNome] = useState('');
@@ -73,7 +74,7 @@ export default function App() {
     sessaoIndex: number;
     exercicioIndex: number;
     dados: any;
-    treinoTarget?: any;
+    isTreinoSalvo?: boolean;
   } | null>(null);
   const [motivoTroca, setMotivoTroca] = useState('');
   const [carregandoTroca, setCarregandoTroca] = useState(false);
@@ -101,21 +102,22 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Carregar Histórico de Treinos do Supabase quando a aba 'historico' for aberta
+  // Carregar o Treino Ativo do Supabase quando a aba 'historico' for aberta
   useEffect(() => {
     if (session?.user && abaPrincipal === 'historico') {
-      carregarHistorico();
+      carregarTreinoAtivo();
     }
   }, [session, abaPrincipal]);
 
-  const carregarHistorico = async () => {
+  const carregarTreinoAtivo = async () => {
     if (!session?.user?.id) return;
     setCarregandoHistorico(true);
     try {
-      const treinos = await buscarMeusTreinos(session.user.id);
-      setTreinosSalvos(treinos);
+      const treino = await buscarTreinoAtivo(session.user.id);
+      setTreinoAtivoSalvo(treino);
+      setSessaoAtivaIndex(0);
     } catch (err: any) {
-      console.warn('Alerta ao buscar histórico:', err.message);
+      console.warn('Alerta ao buscar treino ativo:', err.message);
     } finally {
       setCarregandoHistorico(false);
     }
@@ -188,6 +190,7 @@ export default function App() {
     setFaseAtual(1);
     setResultadoAvaliacao(null);
     setResultadoTreino(null);
+    setTreinoAtivoSalvo(null);
   };
 
   // Função para tirar/selecionar foto
@@ -287,6 +290,7 @@ export default function App() {
       );
       setResultadoTreino(treino);
       setFaseAtual(3);
+      setSessaoAtivaIndex(0);
     } catch (err: any) {
       Alert.alert('Erro ao Prescrever Treino', err.message || 'Falha ao gerar treino.');
     } finally {
@@ -295,8 +299,8 @@ export default function App() {
   };
 
   // Abrir Modal de Substituição de Exercício
-  const handleAbrirModalSubstituicao = (sessaoIndex: number, exercicioIndex: number, dados: any, treinoTarget?: any) => {
-    setExercicioParaSubstituir({ sessaoIndex, exercicioIndex, dados, treinoTarget });
+  const handleAbrirModalSubstituicao = (sessaoIndex: number, exercicioIndex: number, dados: any, isTreinoSalvo = false) => {
+    setExercicioParaSubstituir({ sessaoIndex, exercicioIndex, dados, isTreinoSalvo });
     setMotivoTroca('');
     setModalSubstituicaoVisivel(true);
   };
@@ -313,15 +317,12 @@ export default function App() {
         motivoTroca
       );
 
-      if (exercicioParaSubstituir.treinoTarget) {
-        const novoTreinoObj = JSON.parse(JSON.stringify(exercicioParaSubstituir.treinoTarget));
+      if (exercicioParaSubstituir.isTreinoSalvo && treinoAtivoSalvo) {
+        const novoTreinoObj = JSON.parse(JSON.stringify(treinoAtivoSalvo));
         novoTreinoObj.treino_json.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
           exercicioParaSubstituir.exercicioIndex
         ] = resposta.exercicio_substituto;
-
-        setTreinosSalvos((prev) =>
-          prev.map((t) => (t.id === novoTreinoObj.id ? novoTreinoObj : t))
-        );
+        setTreinoAtivoSalvo(novoTreinoObj);
       } else if (resultadoTreino) {
         const novoTreino = JSON.parse(JSON.stringify(resultadoTreino)) as FichaTreino;
         novoTreino.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
@@ -437,7 +438,7 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* NAVEGAÇÃO DE ABAS PRINCIPAIS: NOVO TREINO vs MEUS TREINOS */}
+        {/* NAVEGAÇÃO DE ABAS PRINCIPAIS: NOVO TREINO vs MEU TREINO ATIVO */}
         <View style={styles.mainNavContainer}>
           <TouchableOpacity
             style={[styles.mainNavTab, abaPrincipal === 'novo' && styles.mainNavTabActive]}
@@ -452,74 +453,100 @@ export default function App() {
             onPress={() => setAbaPrincipal('historico')}
           >
             <Text style={[styles.mainNavTabText, abaPrincipal === 'historico' && styles.mainNavTabTextActive]}>
-              📁 Meus Treinos Salvos
+              💪 Meu Treino Ativo
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ABA 2: MEUS TREINOS SALVOS NO SUPABASE */}
+      {/* ABA 2: MEU TREINO ATIVO NO SUPABASE (ORGANIZADO POR DIAS A, B, C...) */}
       {abaPrincipal === 'historico' && (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.card}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-              <Text style={styles.cardTitle}>📁 Histórico de Treinos Salvos</Text>
-              <TouchableOpacity onPress={carregarHistorico}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={styles.cardTitle}>💪 Sua Ficha de Treino Ativa</Text>
+              <TouchableOpacity onPress={carregarTreinoAtivo}>
                 <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>🔄 Atualizar</Text>
               </TouchableOpacity>
             </View>
 
             {carregandoHistorico ? (
               <ActivityIndicator size="large" color="#38bdf8" style={{ marginVertical: 30 }} />
-            ) : treinosSalvos.length === 0 ? (
+            ) : !treinoAtivoSalvo ? (
               <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                <Text style={{ fontSize: 32, marginBottom: 10 }}>🏋️‍♂️</Text>
-                <Text style={{ color: '#f8fafc', fontWeight: 'bold', fontSize: 16 }}>Nenhum treino salvo ainda</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', marginTop: 6 }}>
-                  Preencha sua anamnese na aba "Novo Treino" para gerar e salvar sua primeira ficha inteligente!
+                <Text style={{ fontSize: 36, marginBottom: 10 }}>🏋️‍♂️</Text>
+                <Text style={{ color: '#f8fafc', fontWeight: 'bold', fontSize: 16 }}>Nenhum treino ativo encontrado</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
+                  Preencha sua anamnese na aba "Novo Treino" para gerar sua primeira ficha inteligente!
                 </Text>
               </View>
             ) : (
-              treinosSalvos.map((item, idx) => {
-                const tData = item.treino_json?.treino;
-                const dataFormatada = new Date(item.created_at).toLocaleDateString('pt-BR');
+              (() => {
+                const tData = treinoAtivoSalvo.treino_json?.treino;
+                const sessoes = tData?.sessoes || [];
+                const sessaoAtual = sessoes[sessaoAtivaIndex] || sessoes[0];
 
                 return (
-                  <View key={item.id || idx} style={[styles.sessionCard, { marginBottom: 16 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={styles.sessionTitle}>Divisão: {item.divisao_nome || tData?.divisao_nome}</Text>
-                      <Text style={{ color: '#94a3b8', fontSize: 11 }}>📅 {dataFormatada}</Text>
-                    </View>
-                    <Text style={{ color: '#cbd5e1', fontSize: 12, marginBottom: 10 }}>
-                      Frequência: {item.frequencia_semanal || tData?.frequencia_semanal}x por semana
+                  <View>
+                    <Text style={{ color: '#cbd5e1', fontSize: 13, marginBottom: 12 }}>
+                      Divisão: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{tData?.divisao_nome}</Text> | {tData?.frequencia_semanal}x por semana
                     </Text>
 
-                    {tData?.sessoes?.map((sessao: any, sIdx: number) => (
-                      <View key={sIdx} style={{ marginTop: 8 }}>
-                        <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>
-                          {sessao.nome}
-                        </Text>
-                        {sessao.exercicios?.map((ex: any, eIdx: number) => (
+                    {/* NAVEGAÇÃO DE DIAS DE TREINO (DIA A, DIA B, DIA C...) */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {sessoes.map((s: any, idx: number) => {
+                          const letraDia = String.fromCharCode(65 + idx); // A, B, C...
+                          const isSelected = sessaoAtivaIndex === idx;
+
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              style={[
+                                styles.dayChip,
+                                isSelected && styles.dayChipActive,
+                              ]}
+                              onPress={() => setSessaoAtivaIndex(idx)}
+                            >
+                              <Text style={[styles.dayChipText, isSelected && styles.dayChipTextActive]}>
+                                Treino {letraDia}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+
+                    {/* SESSÃO DE TREINO SELECIONADA */}
+                    {sessaoAtual && (
+                      <View style={styles.sessionCard}>
+                        <Text style={styles.sessionTitle}>{sessaoAtual.nome}</Text>
+
+                        {sessaoAtual.exercicios?.map((ex: any, eIdx: number) => (
                           <View key={eIdx} style={styles.exerciseBox}>
                             <View style={styles.exerciseHeader}>
                               <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
                               <TouchableOpacity
                                 style={styles.replaceBtn}
-                                onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex, item)}
+                                onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex, true)}
                               >
                                 <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
                               </TouchableOpacity>
                             </View>
+
                             <Text style={styles.exerciseDetails}>
-                              Séries: {ex.series_trabalho} | Reps: {ex.reps} | RIR: {ex.rir_alvo} | Descanso: {ex.descanso_segundos}s
+                              Séries: {ex.series_trabalho} (Aquecimento: {ex.series_aquecimento}) | Reps: {ex.reps} | RIR: {ex.rir_alvo}
+                            </Text>
+                            <Text style={styles.exerciseDetails}>
+                              Descanso: {ex.descanso_segundos}s | Cadência: {ex.foco_biomecanico}
                             </Text>
                           </View>
                         ))}
                       </View>
-                    ))}
+                    )}
                   </View>
                 );
-              })
+              })()
             )}
           </View>
         </ScrollView>
@@ -689,23 +716,50 @@ export default function App() {
                 </View>
               )}
 
-              {/* FASE 3: FICHA DE TREINO PRESCRITA */}
+              {/* FASE 3: FICHA DE TREINO PRESCRITA (VISUALIZAÇÃO POR DIAS A, B, C...) */}
               {faseAtual === 3 && resultadoTreino && (
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>🏋️ Ficha de Treino Prescrita</Text>
-                  <Text style={styles.headerSubtitle}>Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana</Text>
+                  <Text style={styles.headerSubtitle}>
+                    Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana
+                  </Text>
 
-                  {resultadoTreino.treino.sessoes.map((sessao, sIdx) => (
-                    <View key={sIdx} style={styles.sessionCard}>
-                      <Text style={styles.sessionTitle}>{sessao.nome}</Text>
+                  {/* NAVEGAÇÃO DE DIAS DE TREINO (DIA A, DIA B, DIA C...) */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 14 }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {resultadoTreino.treino.sessoes.map((s, idx) => {
+                        const letraDia = String.fromCharCode(65 + idx);
+                        const isSelected = sessaoAtivaIndex === idx;
 
-                      {sessao.exercicios.map((ex, eIdx) => (
+                        return (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[styles.dayChip, isSelected && styles.dayChipActive]}
+                            onPress={() => setSessaoAtivaIndex(idx)}
+                          >
+                            <Text style={[styles.dayChipText, isSelected && styles.dayChipTextActive]}>
+                              Treino {letraDia}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+
+                  {/* SESSÃO ATIVA */}
+                  {resultadoTreino.treino.sessoes[sessaoAtivaIndex] && (
+                    <View style={styles.sessionCard}>
+                      <Text style={styles.sessionTitle}>
+                        {resultadoTreino.treino.sessoes[sessaoAtivaIndex].nome}
+                      </Text>
+
+                      {resultadoTreino.treino.sessoes[sessaoAtivaIndex].exercicios.map((ex, eIdx) => (
                         <View key={eIdx} style={styles.exerciseBox}>
                           <View style={styles.exerciseHeader}>
                             <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
                             <TouchableOpacity
                               style={styles.replaceBtn}
-                              onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex)}
+                              onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex)}
                             >
                               <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
                             </TouchableOpacity>
@@ -720,7 +774,7 @@ export default function App() {
                         </View>
                       ))}
                     </View>
-                  ))}
+                  )}
 
                   <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#475569' }]} onPress={() => setFaseAtual(1)}>
                     <Text style={styles.primaryButtonText}>↺ Fazer Nova Anamnese</Text>
@@ -792,6 +846,10 @@ const styles = StyleSheet.create({
   mainNavTabActive: { backgroundColor: '#0284c7' },
   mainNavTabText: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold' },
   mainNavTabTextActive: { color: '#ffffff' },
+  dayChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#0f172a', borderRadius: 20, borderWidth: 1, borderColor: '#334155' },
+  dayChipActive: { backgroundColor: '#0284c7', borderColor: '#38bdf8' },
+  dayChipText: { color: '#94a3b8', fontSize: 13, fontWeight: 'bold' },
+  dayChipTextActive: { color: '#ffffff' },
   scrollContent: { padding: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#94a3b8', marginTop: 12, fontSize: 14 },
@@ -831,7 +889,7 @@ const styles = StyleSheet.create({
   sectionHeader: { color: '#38bdf8', fontWeight: 'bold', marginTop: 12, marginBottom: 4 },
   listItem: { color: '#e2e8f0', fontSize: 14, marginLeft: 6, marginBottom: 2 },
   bodyText: { color: '#cbd5e1', fontSize: 13, lineHeight: 18 },
-  sessionCard: { backgroundColor: '#0f172a', padding: 14, borderRadius: 10, marginTop: 15, borderWidth: 1, borderColor: '#334155' },
+  sessionCard: { backgroundColor: '#0f172a', padding: 14, borderRadius: 10, marginTop: 10, borderWidth: 1, borderColor: '#334155' },
   sessionTitle: { color: '#38bdf8', fontWeight: 'bold', fontSize: 16, marginBottom: 10 },
   exerciseBox: { backgroundColor: '#1e293b', padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#334155' },
   exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },

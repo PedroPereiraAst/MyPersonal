@@ -45,14 +45,14 @@ export async function executarLoginApi(
   return response.json();
 }
 
-export async function buscarMeusTreinos(userId: string): Promise<any[]> {
+export async function buscarTreinoAtivo(userId: string): Promise<any | null> {
   const response = await fetch(`${API_URL}/meus-treinos/${userId}`);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Erro ao buscar treinos salvos.');
+    throw new Error(errorData.error || 'Erro ao buscar treino ativo.');
   }
   const data = await response.json();
-  return data.treinos || [];
+  return data.treinoAtivo || null;
 }
 
 export async function enviarAvaliacaoAnamnese(
