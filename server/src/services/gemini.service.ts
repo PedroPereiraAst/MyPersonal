@@ -9,6 +9,40 @@ function getAIClient() {
   return new GoogleGenAI({ apiKey });
 }
 
+// Função de resiliência: Tenta o modelo preferido e faz fallback automático se o Google retornar 503 (alta demanda)
+async function generateContentWithRetry(ai: any, params: any) {
+  const preferredModel = params.model;
+  const fallbackModels = [preferredModel, 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  const modelsToTry = [...new Set(fallbackModels)].filter(Boolean);
+
+  let lastError: any;
+  for (const model of modelsToTry) {
+    try {
+      console.log(`🤖 Solicitando geração ao Gemini (modelo: ${model})...`);
+      const response = await ai.models.generateContent({
+        ...params,
+        model,
+      });
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const isHighDemand =
+        err.status === 503 ||
+        err.statusCode === 503 ||
+        String(err.message).includes('503') ||
+        String(err.message).includes('high demand');
+
+      if (isHighDemand) {
+        console.warn(`⚠️ Modelo ${model} em alta demanda temporária (503). Tentando modelo alternativo em 1.5s...`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
+}
 
 export interface ImagemInput {
   mimeType: string;
@@ -20,13 +54,12 @@ export interface AnamneseInput {
   idade: number;
   peso: number;             // Digitado pelo usuário (em kg)
   altura: number;           // Digitado pelo usuário (em cm)
-  objetivo: string;         // ex: 'Hipertrofia', 'Emagrecimento'
+  objetivo: string;         // ex: 'Hipertrofia', 'Definição', 'Powerlifting'
   nivel_experiencia: string;// ex: 'Iniciante', 'Intermediario', 'Avancado'
   dias_disponiveis: number;
   limitacoes_lesoes?: string;
   observacoes_usuario?: string; // Observações extras e pedidos de ajuste do aluno
 
-  
   // NOVOS CAMPOS INTELIGENTES:
   passou_nutricionista: boolean;
   bf_informado?: number;          // Se o usuário souber o BF oficial do nutricionista
@@ -46,36 +79,43 @@ export class GeminiService {
     anamnese: AnamneseInput,
     fotos: ImagemInput[]
   ): Promise<AvaliacaoFisica> {
-    
-    // Constrói a regra de BF dinamicamente para o prompt
-    const regraBF = anamnese.passou_nutricionista && anamnese.bf_informado
-      ? `- O aluno JÁ POSSUI medição oficial de nutricionista. O BF REAL informado é de ${anamnese.bf_informado}%. Use este valor exato como referência primária.`
-      : `- O aluno NÃO possui medição recente de nutricionista, mas AUTORIZOU a estimativa visual. Estime a faixa de % de gordura corporal (BF) pelas fotos.`;
+    let instrucaoNutricionista = '';
 
-    const medidasExtras = anamnese.circunferencias
-      ? `- Medidas Informadas: Cintura: ${anamnese.circunferencias.cintura_cm || 'N/A'}cm, Quadril: ${anamnese.circunferencias.quadril_cm || 'N/A'}cm, Braço: ${anamnese.circunferencias.braco_cm || 'N/A'}cm`
-      : '';
+    if (anamnese.passou_nutricionista && anamnese.bf_informado) {
+      instrucaoNutricionista = `
+NOTA TÉCNICA OBRIGATÓRIA: O aluno informou que JÁ PASSOU por consulta com Nutricionista e possui um % de Gordura (BF) oficial de ${anamnese.bf_informado}%.
+Você DEVE utilizar exatamente o valor "${anamnese.bf_informado}% (Nutricionista)" no campo 'bf_estimado'. Não tente recalcular ou alterar esse valor.
+Use a análise visual das fotos APENAS para identificar pontos fortes, pontos fracos e desvios posturais.
+`;
+    } else if (anamnese.autoriza_estimativa_bf) {
+      instrucaoNutricionista = `
+NOTA TÉCNICA OBRIGATÓRIA: O aluno NUNCA FOI ao nutricionista e AUTORIZOU expressamente a estimativa visual de BF pela IA.
+Analise detalhadamente a definição muscular, vascularização, dobra abdominal e contorno corporal nas fotos para estimar uma faixa realista de BF (ex: "14-17%").
+`;
+    }
 
     const promptText = `
-Você é um Personal Trainer especialista em biomecânica e avaliação física visual.
-Analise os dados biométricos do aluno e as fotos corporais fornecidas (frente, costas, perfil).
+Você é um Personal Trainer e Fisioterapeuta especialista em avaliação física e biomecânica.
+Analise os dados da anamnese e as fotos corporais fornecidas do aluno.
 
 Dados da Anamnese:
 - Nome: ${anamnese.nome}
 - Idade: ${anamnese.idade} anos
 - Peso: ${anamnese.peso} kg
 - Altura: ${anamnese.altura} cm
-${medidasExtras}
-${regraBF}
-- Objetivo Principal: ${anamnese.objetivo}
+- Objetivo: ${anamnese.objetivo}
 - Nível de Experiência: ${anamnese.nivel_experiencia}
+- Frequência Semanal: ${anamnese.dias_disponiveis} dias
 - Limitações/Lesões: ${anamnese.limitacoes_lesoes || 'Nenhuma'}
+- Observações e Pedidos do Aluno: ${anamnese.observacoes_usuario || 'Nenhum'}
 
-Instruções para a Avaliação:
-1. Respeite as informações de % de gordura conforme a regra especificada acima.
-2. Identifique os grupos musculares visualmente bem desenvolvidos (pontos fortes).
-3. Identifique os grupos musculares que necessitam de mais volume/foco (pontos fracos).
-4. Avalie aspectos posturais visíveis (ex: ombros caídos, alinhamento de escápulas).
+${instrucaoNutricionista}
+
+Instruções para o Diagnóstico:
+1. Determine a faixa de BF estimada ou utilize a informada pelo nutricionista.
+2. Identifique os Pontos Fortes do físico (grupos musculares bem desenvolvidos).
+3. Identifique os Pontos Fracos do físico (grupos musculares que necessitam de maior volume de treino para simetria).
+4. Avalie a postura visualmente (ex: rotação de ombros, inclinação pélvica ou simetria geral).
 5. Forneça uma mensagem encorajadora ao aluno explicando os achados.
 `;
 
@@ -88,7 +128,8 @@ Instruções para a Avaliação:
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const ai = getAIClient();
-    const response = await ai.models.generateContent({
+    
+    const response = await generateContentWithRetry(ai, {
       model: modelName,
       contents: [promptText, ...imageParts],
       config: {
@@ -97,7 +138,6 @@ Instruções para a Avaliação:
         temperature: 0.2,
       },
     });
-
 
     if (!response.text) {
       throw new Error('Falha ao obter resposta da API do Gemini para a Avaliação Física.');
@@ -140,7 +180,8 @@ Instruções para a Prescrição:
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     const ai = getAIClient();
-    const response = await ai.models.generateContent({
+    
+    const response = await generateContentWithRetry(ai, {
       model: modelName,
       contents: [promptText],
       config: {
@@ -149,7 +190,6 @@ Instruções para a Prescrição:
         temperature: 0.3,
       },
     });
-
 
     if (!response.text) {
       throw new Error('Falha ao obter resposta da API do Gemini para a Ficha de Treino.');
