@@ -9,16 +9,15 @@ function getAIClient() {
   return new GoogleGenAI({ apiKey });
 }
 
-// Função de resiliência: Tenta o modelo preferido e faz fallback automático se o Google retornar 503 (alta demanda)
+// Função de resiliência: Utiliza EXCLUSIVAMENTE o gemini-3.6-flash com até 3 retentativas em caso de 503 (alta demanda)
 async function generateContentWithRetry(ai: any, params: any) {
-  const preferredModel = params.model;
-  const fallbackModels = [preferredModel, 'gemini-2.0-flash', 'gemini-2.5-flash'];
-  const modelsToTry = [...new Set(fallbackModels)].filter(Boolean);
-
+  const model = params.model || 'gemini-3.6-flash';
+  const maxRetries = 3;
   let lastError: any;
-  for (const model of modelsToTry) {
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🤖 Solicitando geração ao Gemini (modelo: ${model})...`);
+      console.log(`🤖 [Tentativa ${attempt}/${maxRetries}] Solicitando geração ao modelo: ${model}...`);
       const response = await ai.models.generateContent({
         ...params,
         model,
@@ -32,8 +31,8 @@ async function generateContentWithRetry(ai: any, params: any) {
         String(err.message).includes('503') ||
         String(err.message).includes('high demand');
 
-      if (isHighDemand) {
-        console.warn(`⚠️ Modelo ${model} em alta demanda temporária (503). Tentando modelo alternativo em 1.5s...`);
+      if (isHighDemand && attempt < maxRetries) {
+        console.warn(`⚠️ Modelo ${model} em alta demanda (503). Retentando em 1.5s (${attempt}/${maxRetries})...`);
         await new Promise((resolve) => setTimeout(resolve, 1500));
         continue;
       }
@@ -126,7 +125,7 @@ Instruções para o Diagnóstico:
       },
     }));
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
     const ai = getAIClient();
     
     const response = await generateContentWithRetry(ai, {
@@ -178,7 +177,7 @@ Instruções para a Prescrição:
 4. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
 `;
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
     const ai = getAIClient();
     
     const response = await generateContentWithRetry(ai, {
