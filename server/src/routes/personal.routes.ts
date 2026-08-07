@@ -8,6 +8,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   /**
    * ROTA 1: FASE 1 - Avaliação Física via Fotos + Anamnese
    * POST /api/avaliar
+   * (PROTOCOLO DE PRIVACIDADE: Fotos são processadas estritamente em RAM e descartadas)
    */
   fastify.post<{
     Body: {
@@ -24,25 +25,14 @@ export async function personalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // 1. Chama a inteligência do GeminiService para diagnóstico por visão computacional
+      // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
       const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
 
-      // 2. Faz upload assíncrono das fotos para o Supabase Storage
-      const fotosUrls: string[] = [];
-      for (let i = 0; i < fotos.length; i++) {
-        const url = await SupabaseService.uploadFoto(
-          fotos[i].base64Data,
-          fotos[i].mimeType,
-          `foto_${i + 1}`
-        );
-        if (url) fotosUrls.push(url);
-      }
-
-      // 3. Persiste Aluno e Avaliação no PostgreSQL do Supabase
+      // 2. Persiste APENAS dados biométricos e diagnóstico textual no Supabase PostgreSQL
+      // (Nenhuma foto é salva em disco ou cloud por questões de privacidade/LGPD)
       const persistencia = await SupabaseService.salvarAvaliacao(
         anamnese,
-        avaliacao.avaliacao,
-        fotosUrls
+        avaliacao.avaliacao
       );
 
       return reply.status(200).send({

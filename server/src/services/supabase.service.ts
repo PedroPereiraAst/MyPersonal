@@ -7,43 +7,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class SupabaseService {
   /**
-   * Upload de foto base64 para o Supabase Storage (Bucket: fotos-avaliacoes)
-   */
-  static async uploadFoto(base64Data: string, mimeType: string, prefix: string): Promise<string | null> {
-    try {
-      if (!supabaseUrl || !supabaseKey) return null;
-
-      const buffer = Buffer.from(base64Data, 'base64');
-      const ext = mimeType.split('/')[1] || 'jpeg';
-      const filename = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
-
-      const { data, error } = await supabase.storage
-        .from('fotos-avaliacoes')
-        .upload(filename, buffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
-
-      if (error) {
-        console.warn('⚠️ Alerta ao subir foto no Supabase Storage:', error.message);
-        return null;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('fotos-avaliacoes')
-        .getPublicUrl(filename);
-
-      return publicUrlData.publicUrl;
-    } catch (err: any) {
-      console.warn('⚠️ Alerta ao fazer upload de foto:', err.message);
-      return null;
-    }
-  }
-
-  /**
    * Salvar Aluno e Avaliação no PostgreSQL do Supabase
+   * (IMPORTANTE: Fotos NÃO são salvas em lugar nenhum por razões éticas e de privacidade/LGPD)
    */
-  static async salvarAvaliacao(anamnese: any, avaliacao: any, fotosUrls: string[]) {
+  static async salvarAvaliacao(anamnese: any, avaliacao: any) {
     try {
       if (!supabaseUrl || !supabaseKey) return null;
 
@@ -66,7 +33,7 @@ export class SupabaseService {
         return null;
       }
 
-      // 2. Inserir Avaliação
+      // 2. Inserir Avaliação (Apenas métricas numéricas e diagnósticos textuais)
       const { data: registroAvaliacao, error: errAvaliacao } = await supabase
         .from('avaliacoes')
         .insert({
@@ -76,7 +43,6 @@ export class SupabaseService {
           pontos_fracos: avaliacao.pontos_fracos,
           postura_observacoes: avaliacao.postura_observacoes,
           mensagem_validacao: avaliacao.mensagem_validacao,
-          fotos_urls: fotosUrls,
           passou_nutricionista: anamnese.passou_nutricionista || false,
         })
         .select()

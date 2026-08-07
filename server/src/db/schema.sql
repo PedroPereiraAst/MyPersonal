@@ -3,9 +3,10 @@
 -- Cole este script no SQL Editor do Supabase Dashboard
 -- ==========================================
 
--- 1. Tabela de Alunos
+-- 1. Tabela de Alunos (Preparada para vinculo de Login futuro via user_id)
 CREATE TABLE IF NOT EXISTS public.alunos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID, -- Chave para vincular com Supabase Auth (Login) no futuro
   nome TEXT NOT NULL,
   idade INT NOT NULL,
   peso NUMERIC(5,2) NOT NULL,
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.alunos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Tabela de Avaliações Físicas (contém o diagnóstico e as fotos do Storage)
+-- 2. Tabela de Avaliações Físicas (Sem armazenamento de imagens corporais por ética/LGPD)
 CREATE TABLE IF NOT EXISTS public.avaliacoes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   aluno_id UUID REFERENCES public.alunos(id) ON DELETE CASCADE,
@@ -24,7 +25,6 @@ CREATE TABLE IF NOT EXISTS public.avaliacoes (
   pontos_fracos TEXT[] NOT NULL,
   postura_observacoes TEXT NOT NULL,
   mensagem_validacao TEXT NOT NULL,
-  fotos_urls JSONB DEFAULT '[]'::jsonb, -- Armazena as URLs das fotos salvas no Supabase Storage
   passou_nutricionista BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
