@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { GeminiService, type AnamneseInput, type ImagemInput } from '../services/gemini.service.js';
-import type { AvaliacaoFisica } from '../types/schemas.js';
+import type { AvaliacaoFisica, ExercicioItem } from '../types/schemas.js';
 
 export async function personalRoutes(fastify: FastifyInstance) {
   
@@ -64,6 +64,42 @@ export async function personalRoutes(fastify: FastifyInstance) {
       fastify.log.error(error);
       return reply.status(500).send({
         error: 'Erro ao prescrever a ficha de treino.',
+        details: error.message,
+      });
+    }
+  });
+
+  /**
+   * ROTA 3: RECURSO EXCLUSIVO - Substituição Individual de Exercício
+   * POST /api/substituir-exercicio
+   */
+  fastify.post<{
+    Body: {
+      exercicioOriginal: ExercicioItem;
+      objetivo: string;
+      motivoSubstituicao?: string;
+    };
+  }>('/substituir-exercicio', async (request, reply) => {
+    try {
+      const { exercicioOriginal, objetivo, motivoSubstituicao } = request.body;
+
+      if (!exercicioOriginal || !objetivo) {
+        return reply.status(400).send({
+          error: 'É necessário enviar o exercício original e o objetivo para a substituição.',
+        });
+      }
+
+      const resultado = await GeminiService.substituirExercicio(
+        exercicioOriginal,
+        objetivo,
+        motivoSubstituicao
+      );
+
+      return reply.status(200).send(resultado);
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(500).send({
+        error: 'Erro ao substituir exercício.',
         details: error.message,
       });
     }

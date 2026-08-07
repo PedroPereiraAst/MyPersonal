@@ -11,9 +11,14 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { enviarAvaliacaoAnamnese, solicitarGeracaoTreino } from './src/services/api';
+import {
+  enviarAvaliacaoAnamnese,
+  solicitarGeracaoTreino,
+  solicitarSubstituicaoExercicio,
+} from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
 export default function App() {
@@ -43,6 +48,16 @@ export default function App() {
   // Respostas da IA
   const [resultadoAvaliacao, setResultadoAvaliacao] = useState<AvaliacaoFisica | null>(null);
   const [resultadoTreino, setResultadoTreino] = useState<FichaTreino | null>(null);
+
+  // Estado para Modal de Substituição de Exercício
+  const [modalSubstituicaoVisivel, setModalSubstituicaoVisivel] = useState(false);
+  const [exercicioParaSubstituir, setExercicioParaSubstituir] = useState<{
+    sessaoIndex: number;
+    exercicioIndex: number;
+    dados: any;
+  } | null>(null);
+  const [motivoTroca, setMotivoTroca] = useState('');
+  const [carregandoTroca, setCarregandoTroca] = useState(false);
 
   // Lista de Objetivos Disponíveis
   const listaObjetivos = ['Hipertrofia', 'Definição', 'Powerlifting', 'Endurance', 'Calistenia'];
@@ -146,6 +161,45 @@ export default function App() {
       Alert.alert('Erro ao Prescrever Treino', err.message || 'Falha ao gerar treino.');
     } finally {
       setCarregando(false);
+    }
+  };
+
+  // Abrir Modal de Substituição de Exercício
+  const handleAbrirModalSubstituicao = (sessaoIndex: number, exercicioIndex: number, dados: any) => {
+    setExercicioParaSubstituir({ sessaoIndex, exercicioIndex, dados });
+    setMotivoTroca('');
+    setModalSubstituicaoVisivel(true);
+  };
+
+  // Executar a Substituição via IA (Gemini 3.6 Flash)
+  const handleExecutarSubstituicao = async () => {
+    if (!exercicioParaSubstituir || !resultadoTreino) return;
+
+    setCarregandoTroca(true);
+    try {
+      const resposta = await solicitarSubstituicaoExercicio(
+        exercicioParaSubstituir.dados,
+        objetivo,
+        motivoTroca
+      );
+
+      // Atualiza o treino presencialmente no estado
+      const novoTreino = JSON.parse(JSON.stringify(resultadoTreino)) as FichaTreino;
+      novoTreino.treino.sessoes[exercicioParaSubstituir.sessaoIndex].exercicios[
+        exercicioParaSubstituir.exercicioIndex
+      ] = resposta.exercicio_substituto;
+
+      setResultadoTreino(novoTreino);
+      setModalSubstituicaoVisivel(false);
+
+      Alert.alert(
+        '🔄 Exercício Substituído com Sucesso!',
+        `Novo Exercício: ${resposta.exercicio_substituto.nome}\n\nMotivo da Escolha: ${resposta.motivo_escolha}`
+      );
+    } catch (err: any) {
+      Alert.alert('Erro ao Substituir', err.message || 'Não foi possível trocar o exercício.');
+    } finally {
+      setCarregandoTroca(false);
     }
   };
 
@@ -337,7 +391,16 @@ export default function App() {
 
                   {sessao.exercicios.map((ex, eIdx) => (
                     <View key={eIdx} style={styles.exerciseBox}>
-                      <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
+                      <View style={styles.exerciseHeader}>
+                        <Text style={styles.exerciseName}>{eIdx + 1}. {ex.nome}</Text>
+                        <TouchableOpacity
+                          style={styles.replaceBtn}
+                          onPress={() => handleAbrirModalSubstituicao(sIdx, eIdx, ex)}
+                        >
+                          <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
+                        </TouchableOpacity>
+                      </View>
+
                       <Text style={styles.exerciseDetails}>
                         Séries: {ex.series_trabalho} (Aquecimento: {ex.series_aquecimento}) | Reps: {ex.reps} | RIR: {ex.rir_alvo}
                       </Text>
@@ -356,6 +419,49 @@ export default function App() {
           )}
         </ScrollView>
       )}
+
+      {/* MODAL DE SUBSTITUIÇÃO DE EXERCÍCIO */}
+      <Modal visible={modalSubstituicaoVisivel} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>🔄 Substituir Exercício</Text>
+
+            {exercicioParaSubstituir && (
+              <Text style={styles.modalSubTitle}>
+                Exercício Atual: <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>{exercicioParaSubstituir.dados.nome}</Text>
+              </Text>
+            )}
+
+            <Text style={styles.label}>Motivo da Troca (Opcional):</Text>
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              value={motivoTroca}
+              onChangeText={setMotivoTroca}
+              multiline
+              numberOfLines={3}
+              placeholder="Ex: Não tenho essa máquina na academia / Sinto dor no ombro com este movimento"
+              placeholderTextColor="#64748b"
+            />
+
+            {carregandoTroca ? (
+              <ActivityIndicator size="small" color="#38bdf8" style={{ marginVertical: 10 }} />
+            ) : (
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: '#475569' }]}
+                  onPress={() => setModalSubstituicaoVisivel(false)}
+                >
+                  <Text style={styles.modalBtnText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#0284c7' }]} onPress={handleExecutarSubstituicao}>
+                  <Text style={styles.modalBtnText}>Trocar Exercício 🔄</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -399,7 +505,17 @@ const styles = StyleSheet.create({
   bodyText: { color: '#cbd5e1', fontSize: 13, lineHeight: 18 },
   sessionCard: { backgroundColor: '#0f172a', padding: 14, borderRadius: 10, marginTop: 15, borderWidth: 1, borderColor: '#334155' },
   sessionTitle: { color: '#38bdf8', fontWeight: 'bold', fontSize: 16, marginBottom: 10 },
-  exerciseBox: { backgroundColor: '#1e293b', padding: 10, borderRadius: 6, marginBottom: 8 },
-  exerciseName: { color: '#f8fafc', fontWeight: 'bold', fontSize: 14 },
+  exerciseBox: { backgroundColor: '#1e293b', padding: 12, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#334155' },
+  exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  exerciseName: { color: '#f8fafc', fontWeight: 'bold', fontSize: 15, flex: 1 },
+  replaceBtn: { backgroundColor: '#0284c7', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  replaceBtnText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   exerciseDetails: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.75)', justifyContent: 'center', padding: 20 },
+  modalContainer: { backgroundColor: '#1e293b', padding: 20, borderRadius: 14, borderWidth: 1, borderColor: '#334155' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#f8fafc', marginBottom: 8 },
+  modalSubTitle: { fontSize: 14, color: '#cbd5e1', marginBottom: 15 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 15 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
+  modalBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
 });

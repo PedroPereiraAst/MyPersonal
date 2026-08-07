@@ -1,5 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
-import { AvaliacaoSchema, TreinoSchema, type AvaliacaoFisica, type FichaTreino } from '../types/schemas.js';
+import {
+  AvaliacaoSchema,
+  TreinoSchema,
+  SubstituicaoExercicioSchema,
+  type AvaliacaoFisica,
+  type FichaTreino,
+  type ExercicioItem,
+  type SubstituicaoResultado,
+} from '../types/schemas.js';
 
 function getAIClient() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -127,7 +135,7 @@ Instruções para o Diagnóstico:
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
     const ai = getAIClient();
-    
+
     const response = await generateContentWithRetry(ai, {
       model: modelName,
       contents: [promptText, ...imageParts],
@@ -179,7 +187,7 @@ Instruções para a Prescrição:
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
     const ai = getAIClient();
-    
+
     const response = await generateContentWithRetry(ai, {
       model: modelName,
       contents: [promptText],
@@ -195,5 +203,54 @@ Instruções para a Prescrição:
     }
 
     return JSON.parse(response.text) as FichaTreino;
+  }
+
+  /**
+   * RECURSO EXCLUSIVO: Substituir Exercício Específico na Ficha
+   */
+  static async substituirExercicio(
+    exercicioOriginal: ExercicioItem,
+    objetivo: string,
+    motivoSubstituicao?: string
+  ): Promise<SubstituicaoResultado> {
+    const promptText = `
+Você é um Personal Trainer especialista em biomecânica e musculação.
+O aluno pediu para SUBSTITUIR um exercício específico da sua ficha de treino.
+
+Exercício Original:
+- Nome: ${exercicioOriginal.nome}
+- Séries de Trabalho: ${exercicioOriginal.series_trabalho}
+- Faixa de Repetições: ${exercicioOriginal.reps}
+- Descanso: ${exercicioOriginal.descanso_segundos}s
+- Foco Biomecânico: ${exercicioOriginal.foco_biomecanico}
+
+Contexto do Aluno:
+- Objetivo Principal: ${objetivo}
+- Motivo da Solicitação de Troca: ${motivoSubstituicao || 'O aluno não possui o equipamento na academia ou prefere outra variação equivalente.'}
+
+Instruções para a Substituição:
+1. Encontre um EXERCÍCIO SUBSTITUTO EQUIVALENTE que trabalhe o mesmo grupo muscular com vetores de força semelhantes.
+2. Mantenha ou ajuste sutilmente as séries de trabalho, repetições, RIR e tempo de descanso para ser 100% compatível.
+3. Forneça uma explicação biomecânica em 'motivo_escolha' justificando a substituição.
+`;
+
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+    const ai = getAIClient();
+
+    const response = await generateContentWithRetry(ai, {
+      model: modelName,
+      contents: [promptText],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: SubstituicaoExercicioSchema,
+        temperature: 0.3,
+      },
+    });
+
+    if (!response.text) {
+      throw new Error('Falha ao obter resposta da API do Gemini para a Substituição do Exercício.');
+    }
+
+    return JSON.parse(response.text) as SubstituicaoResultado;
   }
 }

@@ -60,3 +60,30 @@ export async function solicitarGeracaoTreino(
 
   return response.json();
 }
+
+export async function solicitarSubstituicaoExercicio(
+  exercicioOriginal: any,
+  objetivo: string,
+  motivoSubstituicao?: string
+): Promise<{ exercicio_substituto: any; motivo_escolha: string }> {
+  const response = await fetch(`${API_URL}/substituir-exercicio`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      exercicioOriginal,
+      objetivo,
+      motivoSubstituicao,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const mensagemErro = errorData.details || errorData.error || `Erro HTTP ${response.status}`;
+    console.error('❌ Erro na resposta da API /substituir-exercicio:', mensagemErro);
+    throw new Error(mensagemErro);
+  }
+
+  return response.json();
+}

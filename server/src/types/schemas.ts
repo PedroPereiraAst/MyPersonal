@@ -4,6 +4,16 @@ import { Type, type Schema } from '@google/genai';
 // 1. INTERFACES TYPESCRIPT (TIPAGEM NO CÓDIGO)
 // ==========================================
 
+export interface ExercicioItem {
+  nome: string;
+  series_aquecimento: number;
+  series_trabalho: number;
+  reps: string;
+  rir_alvo: number;
+  descanso_segundos: number;
+  foco_biomecanico: string;
+}
+
 export interface AvaliacaoFisica {
   fase: 'AVALIACAO';
   avaliacao: {
@@ -23,17 +33,14 @@ export interface FichaTreino {
     volume_resumo: { grupo: string; series_semanais: number }[];
     sessoes: {
       nome: string;
-      exercicios: {
-        nome: string;
-        series_aquecimento: number;
-        series_trabalho: number;
-        reps: string;
-        rir_alvo: number;
-        descanso_segundos: number;
-        foco_biomecanico: string;
-      }[];
+      exercicios: ExercicioItem[];
     }[];
   };
+}
+
+export interface SubstituicaoResultado {
+  exercicio_substituto: ExercicioItem;
+  motivo_escolha: string;
 }
 
 // ==========================================
@@ -128,4 +135,34 @@ export const TreinoSchema: Schema = {
     }
   },
   required: ['fase', 'treino']
+};
+
+// Schema da Substituição Individual de Exercício
+export const SubstituicaoExercicioSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    exercicio_substituto: {
+      type: Type.OBJECT,
+      properties: {
+        nome: { type: Type.STRING, description: 'Nome do novo exercício substituto equivalente' },
+        series_aquecimento: { type: Type.NUMBER },
+        series_trabalho: { type: Type.NUMBER },
+        reps: { type: Type.STRING },
+        rir_alvo: { type: Type.NUMBER },
+        descanso_segundos: { type: Type.NUMBER },
+        foco_biomecanico: { type: Type.STRING }
+      },
+      required: [
+        'nome',
+        'series_aquecimento',
+        'series_trabalho',
+        'reps',
+        'rir_alvo',
+        'descanso_segundos',
+        'foco_biomecanico'
+      ]
+    },
+    motivo_escolha: { type: Type.STRING, description: 'Explicação biomecânica de por que este exercício substituto é ideal' }
+  },
+  required: ['exercicio_substituto', 'motivo_escolha']
 };
