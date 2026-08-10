@@ -57,7 +57,8 @@ export async function buscarTreinoAtivo(userId: string): Promise<any | null> {
 
 export async function enviarAvaliacaoAnamnese(
   anamnese: AnamneseFormData,
-  fotos: ImagemFoto[]
+  fotos: ImagemFoto[],
+  userId?: string
 ): Promise<AvaliacaoFisica> {
   const response = await fetch(`${API_URL}/avaliar`, {
     method: 'POST',
@@ -70,6 +71,7 @@ export async function enviarAvaliacaoAnamnese(
         mimeType: f.mimeType,
         base64Data: f.base64Data,
       })),
+      userId,
     }),
   });
 

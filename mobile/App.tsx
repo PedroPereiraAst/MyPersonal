@@ -311,7 +311,7 @@ export default function App() {
 
     setCarregando(true);
     try {
-      const avaliacao = await enviarAvaliacaoAnamnese(anamneseData, fotosArray);
+      const avaliacao = await enviarAvaliacaoAnamnese(anamneseData, fotosArray, session?.user?.id);
       setResultadoAvaliacao(avaliacao);
       setFaseAtual(2);
     } catch (err: any) {

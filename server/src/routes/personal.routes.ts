@@ -72,10 +72,11 @@ export async function personalRoutes(fastify: FastifyInstance) {
     Body: {
       anamnese: AnamneseInput;
       fotos: ImagemInput[];
+      userId?: string;
     };
   }>('/avaliar', async (request, reply) => {
     try {
-      const { anamnese, fotos } = request.body;
+      const { anamnese, fotos, userId } = request.body;
 
       if (!anamnese || !fotos || fotos.length === 0) {
         return reply.status(400).send({
@@ -86,8 +87,8 @@ export async function personalRoutes(fastify: FastifyInstance) {
       // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
       const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
 
-      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante)
-      SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao).catch((err) => {
+      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante) VINCULANDO O USER_ID
+      SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao, userId).catch((err) => {
         console.warn('⚠️ Alerta não-bloqueante ao salvar no Supabase:', err.message);
       });
 

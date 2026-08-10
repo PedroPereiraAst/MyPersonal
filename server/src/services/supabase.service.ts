@@ -68,14 +68,31 @@ export class SupabaseService {
       const client = getSupabaseClient();
       if (!client) return null;
 
-      const { data: treinos, error } = await client
-        .from('treinos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1);
+      // Buscar primeiro os alunos pertencentes a este user_id
+      const { data: alunos } = await client
+        .from('alunos')
+        .select('id')
+        .eq('user_id', userId);
+
+      const alunoIds = alunos ? alunos.map((a) => a.id) : [];
+
+      let query = client.from('treinos').select('*').order('created_at', { ascending: false }).limit(1);
+
+      if (alunoIds.length > 0) {
+        query = query.in('aluno_id', alunoIds);
+      }
+
+      const { data: treinos, error } = await query;
 
       if (error || !treinos || treinos.length === 0) {
-        return null;
+        // Fallback: tentar buscar sem filtro se não encontrou por aluno_id
+        const { data: todosTreinos } = await client
+          .from('treinos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        return todosTreinos && todosTreinos.length > 0 ? todosTreinos[0] : null;
       }
 
       return treinos[0];
@@ -86,16 +103,18 @@ export class SupabaseService {
   }
 
   /**
-   * Salvar Aluno e Avaliação no PostgreSQL do Supabase
+   * Salvar Aluno e Avaliação no PostgreSQL do Supabase (VINCULANDO user_id)
    */
-  static async salvarAvaliacao(anamnese: any, avaliacao: any) {
+  static async salvarAvaliacao(anamnese: any, avaliacao: any, userId?: string) {
     try {
       const client = getSupabaseClient();
       if (!client) return null;
 
+      // 1. Inserir Aluno com user_id do Supabase Auth
       const { data: aluno, error: errAluno } = await client
         .from('alunos')
         .insert({
+          user_id: userId || null,
           nome: anamnese.nome,
           idade: anamnese.idade,
           peso: anamnese.peso,
@@ -111,6 +130,7 @@ export class SupabaseService {
         return null;
       }
 
+      // 2. Inserir Avaliação
       const { data: registroAvaliacao, error: errAvaliacao } = await client
         .from('avaliacoes')
         .insert({
