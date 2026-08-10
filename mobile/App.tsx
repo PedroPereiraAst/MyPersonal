@@ -1268,7 +1268,7 @@ export default function App() {
                               <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
                             </View>
                             <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
+                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
                             </View>
                           </View>
                           <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
