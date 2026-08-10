@@ -174,7 +174,6 @@ export default function App() {
   }, []);
 
   // LOOPER EM SEGUNDO PLANO (TIMESTAMP-BASED TIME TRACKING)
-  // Garante que o Cronômetro e o Rest Timer funcionem 100% mesmo com o app minimizado ou em segundo plano!
   useEffect(() => {
     const timerInterval = setInterval(() => {
       const agora = Date.now();
@@ -193,7 +192,7 @@ export default function App() {
         if (restante === 0) {
           setDescansoAtivo(false);
           setTimestampFimDescanso(null);
-          Alert.alert('⏰ Fim do Descanso!', 'Hora de iniciar a próxima série!');
+          Alert.alert('Fim do Descanso', 'Hora de iniciar a próxima série!');
         }
       }
     }, 500);
@@ -252,12 +251,12 @@ export default function App() {
     };
 
     if (typeof window !== 'undefined' && typeof (window as any).confirm === 'function') {
-      if ((window as any).confirm(`⏹️ Finalizar Treino\n\nParabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`)) {
+      if ((window as any).confirm(`Finalizar Treino\n\nParabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`)) {
         encerrar();
       }
     } else {
       Alert.alert(
-        '⏹️ Finalizar Treino',
+        'Finalizar Treino',
         `Parabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`,
         [
           { text: 'Cancelar', style: 'cancel' },
@@ -513,7 +512,7 @@ export default function App() {
       setModalSubstituicaoVisivel(false);
 
       Alert.alert(
-        '🔄 Exercício Substituído com Sucesso!',
+        'Exercício Substituído com Sucesso!',
         `Novo Exercício: ${resposta.exercicio_substituto.nome}\n\nMotivo da Escolha: ${resposta.motivo_escolha}`
       );
     } catch (err: any) {
@@ -523,14 +522,14 @@ export default function App() {
     }
   };
 
-  // SE O USUÁRIO NÃO ESTIVER LOGADO -> EXIBIR TELA DE AUTENTICAÇÃO (FASE 0)
+  // SE O USUÁRIO NÃO ESTIVER LOGADO -> EXIBIR TELA DE AUTENTICAÇÃO
   if (!session) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
         <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }}>
           <View style={[styles.authCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.authLogo, { color: t.accentGreen }]}>🏋️ MyPersonal</Text>
+            <Text style={[styles.authLogo, { color: t.accentGreen }]}>MyPersonal</Text>
 
             <View style={[styles.authTabContainer, { backgroundColor: t.inputBg }]}>
               <TouchableOpacity
@@ -624,7 +623,7 @@ export default function App() {
                 onPress={abaAuth === 'login' ? handleLogin : handleCadastro}
               >
                 <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                  {abaAuth === 'login' ? 'Entrar no App ➔' : 'Criar Minha Conta ⚡'}
+                  {abaAuth === 'login' ? 'Entrar no App' : 'Criar Minha Conta'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -634,17 +633,17 @@ export default function App() {
     );
   }
 
-  // TELA PRINCIPAL (USUÁRIO AUTENTICADO COM SAMSUNG ONE UI 8.5 & CLEAN HEADER)
+  // TELA PRINCIPAL
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
       <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
 
-      {/* HEADER LIMPO COM TÍTULO, SAUDAÇÃO E BOTÃO DE MENU LIQUID GLASS (☰ MENU) */}
+      {/* HEADER PRINCIPAL */}
       <View style={[styles.header, { backgroundColor: t.headerBg, borderColor: t.cardBorder }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
-            <Text style={[styles.headerTitle, { color: t.textPrimary }]}>🏋️ MyPersonal</Text>
-            <Text style={[styles.headerUserText, { color: t.accentGreen }]}>Olá, {nome || session.user.email} 👋</Text>
+            <Text style={[styles.headerTitle, { color: t.textPrimary }]}>MyPersonal</Text>
+            <Text style={[styles.headerUserText, { color: t.accentGreen }]}>Olá, {nome || session.user.email}</Text>
           </View>
           <TouchableOpacity
             style={[
@@ -657,17 +656,17 @@ export default function App() {
             ]}
             onPress={() => setMenuLateralVisivel(true)}
           >
-            <Text style={[styles.menuBtnText, { color: t.glassButtonText }]}>☰ Menu</Text>
+            <Text style={[styles.menuBtnText, { color: t.glassButtonText }]}>Menu</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ABA 3: CRONÔMETRO DE TREINO & TIMER DE DESCANSO (PERSISTÊNCIA EM SEGUNDO PLANO) */}
+      {/* ABA 3: CRONÔMETRO DE TREINO & TIMER DE DESCANSO */}
       {abaPrincipal === 'cronometro' && (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* CARD 1: CRONÔMETRO DO TEMPO TOTAL DE TREINO */}
           <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder, marginBottom: 16 }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>⏱️ Tempo Total de Treino</Text>
+            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Tempo Total de Treino</Text>
             <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 15 }}>
               Contabilize a duração total da sua sessão na academia.
             </Text>
@@ -688,7 +687,7 @@ export default function App() {
                 {formatarTempo(tempoTreinoSegundos)}
               </Text>
               <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
-                {!treinoIniciado ? 'Pronto para iniciar' : treinoPausado ? '⏸️ Treino Pausado' : '⚡ Treino em Andamento'}
+                {!treinoIniciado ? 'Pronto para iniciar' : treinoPausado ? 'Treino Pausado' : 'Treino em Andamento'}
               </Text>
             </View>
 
@@ -709,7 +708,7 @@ export default function App() {
                   onPress={handleIniciarOuContinuarTreino}
                 >
                   <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                    ▶️ Iniciar Treino
+                    Iniciar Treino
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -729,7 +728,7 @@ export default function App() {
                       onPress={handleIniciarOuContinuarTreino}
                     >
                       <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                        ▶️ Continuar
+                        Continuar
                       </Text>
                     </TouchableOpacity>
                   ) : (
@@ -740,7 +739,7 @@ export default function App() {
                       ]}
                       onPress={handlePausarTreino}
                     >
-                      <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar</Text>
+                      <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Pausar</Text>
                     </TouchableOpacity>
                   )}
 
@@ -751,7 +750,7 @@ export default function App() {
                     ]}
                     onPress={handleFinalizarTreino}
                   >
-                    <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏹️ Finalizar</Text>
+                    <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Finalizar</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -760,7 +759,7 @@ export default function App() {
 
           {/* CARD 2: TIMER DE DESCANSO ENTRE SÉRIES */}
           <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>🔔 Timer de Descanso Entre Séries</Text>
+            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Timer de Descanso Entre Séries</Text>
             <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 12 }}>
               Selecione o tempo de pausa e ative a contagem regressiva:
             </Text>
@@ -816,7 +815,7 @@ export default function App() {
                 {formatarTempo(descansoSegundosRestantes)}
               </Text>
               <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
-                {descansoAtivo ? '⏳ Descansando em segundo plano...' : 'Selecione uma opção acima para iniciar'}
+                {descansoAtivo ? 'Descansando em segundo plano...' : 'Selecione uma opção acima para iniciar'}
               </Text>
             </View>
 
@@ -830,7 +829,7 @@ export default function App() {
                   ]}
                   onPress={handlePausarDescanso}
                 >
-                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar Pausa</Text>
+                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Pausar Descanso</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -847,7 +846,7 @@ export default function App() {
                   onPress={() => handleIniciarDescanso(descansoDuracaoSegundos)}
                 >
                   <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                    ▶️ Iniciar Descanso
+                    Iniciar Descanso
                   </Text>
                 </TouchableOpacity>
               )}
@@ -859,21 +858,21 @@ export default function App() {
                 ]}
                 onPress={handleResetarDescanso}
               >
-                <Text style={[styles.primaryButtonText, { color: t.textSecondary }]}>↺ Resetar</Text>
+                <Text style={[styles.primaryButtonText, { color: t.textSecondary }]}>Resetar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       )}
 
-      {/* ABA 2: MEU TREINO ATIVO NO SUPABASE (SAMSUNG ONE UI 8.5 CAPSULES) */}
+      {/* ABA 2: MEU TREINO ATIVO NO SUPABASE */}
       {abaPrincipal === 'historico' && (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={[styles.cardTitle, { color: t.textPrimary }]}>💪 Ficha de Treino Ativa</Text>
+              <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Ficha de Treino Ativa</Text>
               <TouchableOpacity onPress={carregarTreinoAtivo}>
-                <Text style={{ color: t.accentGreen, fontSize: 13, fontWeight: 'bold' }}>🔄 Atualizar</Text>
+                <Text style={{ color: t.accentGreen, fontSize: 13, fontWeight: 'bold' }}>Atualizar</Text>
               </TouchableOpacity>
             </View>
 
@@ -881,10 +880,9 @@ export default function App() {
               <ActivityIndicator size="large" color={t.accentGreen} style={{ marginVertical: 30 }} />
             ) : !treinoAtivoSalvo ? (
               <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                <Text style={{ fontSize: 36, marginBottom: 10 }}>🏋️‍♂️</Text>
                 <Text style={{ color: t.textPrimary, fontWeight: 'bold', fontSize: 16 }}>Nenhum treino ativo encontrado</Text>
                 <Text style={{ color: t.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
-                  Abra o Menu ☰ no topo e selecione "Gerar Novo Treino" para prescrever sua primeira ficha inteligente!
+                  Abra o Menu no topo e selecione "Gerar Novo Treino" para prescrever sua primeira ficha inteligente!
                 </Text>
               </View>
             ) : (
@@ -899,7 +897,7 @@ export default function App() {
                       Divisão: <Text style={{ color: t.accentGreen, fontWeight: 'bold' }}>{tData?.divisao_nome}</Text> | {tData?.frequencia_semanal}x por semana
                     </Text>
 
-                    {/* SELEÇÃO DE DIAS DE TREINO (TREINO A, B, C...) EM CÁPSULAS LIQUID GLASS */}
+                    {/* SELEÇÃO DE DIAS DE TREINO (TREINO A, B, C...) */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         {sessoes.map((s: any, idx: number) => {
@@ -952,7 +950,7 @@ export default function App() {
                                 ]}
                                 onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex, true)}
                               >
-                                <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>🔄 Trocar</Text>
+                                <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>Substituir</Text>
                               </TouchableOpacity>
                             </View>
 
@@ -971,7 +969,7 @@ export default function App() {
                                 <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
                               </View>
                             </View>
-                            <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>💡 Cadência: {ex.foco_biomecanico}</Text>
+                            <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
                           </View>
                         ))}
                       </View>
@@ -999,7 +997,7 @@ export default function App() {
               {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS */}
               {faseAtual === 1 && (
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>📋 Dados Biométricos</Text>
+                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Dados Biométricos</Text>
 
                   <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
                   <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor={t.textSecondary} />
@@ -1116,12 +1114,12 @@ export default function App() {
 
                   {passouNutricionista === false && (
                     <Text style={[styles.infoText, { color: t.accentCyan }]}>
-                      ℹ️ A IA do Gemini utilizará visão computacional nas suas fotos para estimar o seu % de gordura corporal.
+                      A IA do Gemini utilizará visão computacional nas suas fotos para estimar o seu % de gordura corporal.
                     </Text>
                   )}
 
                   {/* UPLOAD DE FOTOS */}
-                  <Text style={[styles.cardTitle, { marginTop: 25, color: t.textPrimary }]}>📸 Fotos Corporais</Text>
+                  <Text style={[styles.cardTitle, { marginTop: 25, color: t.textPrimary }]}>Fotos Corporais</Text>
 
                   <View style={styles.photoContainer}>
                     {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
@@ -1146,7 +1144,7 @@ export default function App() {
                     ]}
                     onPress={handleSubmeterAnamnese}
                   >
-                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Analisar com IA Multimodal ➔</Text>
+                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Analisar com IA Multimodal</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1154,26 +1152,26 @@ export default function App() {
               {/* FASE 2: VALIDAÇÃO DO DIAGNÓSTICO DA IA */}
               {faseAtual === 2 && resultadoAvaliacao && (
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>📊 Diagnóstico Visual da IA</Text>
+                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Diagnóstico Visual da IA</Text>
 
                   <View style={[styles.highlightBadge, { backgroundColor: t.glassButtonBg, borderColor: t.glassButtonBorder, borderWidth: 1 }]}>
                     <Text style={[styles.highlightText, { color: t.glassButtonText }]}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
                   </View>
 
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>💪 Pontos Fortes:</Text>
+                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Pontos Fortes:</Text>
                   {resultadoAvaliacao.avaliacao.pontos_fortes.map((pf, idx) => (
                     <Text key={idx} style={[styles.listItem, { color: t.textPrimary }]}>• {pf}</Text>
                   ))}
 
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>🎯 Pontos Fracos (Prioridade de Treino):</Text>
+                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Pontos Fracos (Prioridade de Treino):</Text>
                   {resultadoAvaliacao.avaliacao.pontos_fracos.map((pf, idx) => (
                     <Text key={idx} style={[styles.listItem, { color: t.textPrimary }]}>• {pf}</Text>
                   ))}
 
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>🔍 Observações Posturais:</Text>
+                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Observações Posturais:</Text>
                   <Text style={[styles.bodyText, { color: t.textSecondary }]}>{resultadoAvaliacao.avaliacao.postura_observacoes}</Text>
 
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>💬 Mensagem da IA:</Text>
+                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Mensagem da IA:</Text>
                   <Text style={[styles.bodyText, { color: t.textSecondary }]}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
 
                   <TouchableOpacity
@@ -1187,20 +1185,20 @@ export default function App() {
                     ]}
                     onPress={handleConfirmarEGerarTreino}
                   >
-                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Concordo 100% / Gerar Treino ⚡</Text>
+                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Concordo 100% / Gerar Treino</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              {/* FASE 3: FICHA DE TREINO PRESCRITA (VISUALIZAÇÃO POR DIAS A, B, C...) */}
+              {/* FASE 3: FICHA DE TREINO PRESCRITA */}
               {faseAtual === 3 && resultadoTreino && (
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>🏋️ Ficha de Treino Prescrita</Text>
+                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Ficha de Treino Prescrita</Text>
                   <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
                     Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana
                   </Text>
 
-                  {/* NAVEGAÇÃO DE DIAS DE TREINO (DIA A, DIA B, DIA C...) */}
+                  {/* NAVEGAÇÃO DE DIAS DE TREINO (TREINO A, TREINO B, TREINO C...) */}
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 14 }}>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {resultadoTreino.treino.sessoes.map((s, idx) => {
@@ -1255,7 +1253,7 @@ export default function App() {
                               ]}
                               onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex)}
                             >
-                              <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>🔄 Trocar</Text>
+                              <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>Substituir</Text>
                             </TouchableOpacity>
                           </View>
 
@@ -1270,17 +1268,17 @@ export default function App() {
                               <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
                             </View>
                             <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
+                              <Text style={[styles.metricPillText, { color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
                             </View>
                           </View>
-                          <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>💡 Cadência: {ex.foco_biomecanico}</Text>
+                          <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
                         </View>
                       ))}
                     </View>
                   )}
 
                   <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#475569' }]} onPress={() => setFaseAtual(1)}>
-                    <Text style={styles.primaryButtonText}>↺ Fazer Nova Anamnese</Text>
+                    <Text style={styles.primaryButtonText}>Fazer Nova Anamnese</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1310,16 +1308,16 @@ export default function App() {
           >
             <View style={{ marginBottom: 25 }}>
               <Text style={{ fontSize: 22, fontWeight: 'bold', color: t.textPrimary }}>
-                🏋️ MyPersonal
+                MyPersonal
               </Text>
               <Text style={{ fontSize: 13, color: t.textSecondary, marginTop: 10 }}>
                 {nome || session?.user?.email}
               </Text>
             </View>
 
-            {/* SEÇÃO ALTERNADOR DE TEMA (LIGHT MODE vs DARK MODE) */}
+            {/* SEÇÃO ALTERNADOR DE TEMA */}
             <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              ⚙️ TEMA DO APLICATIVO
+              TEMA DO APLICATIVO
             </Text>
 
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 25 }}>
@@ -1336,7 +1334,7 @@ export default function App() {
                 onPress={() => setTemaAtual('light')}
               >
                 <Text style={{ fontWeight: 'bold', color: temaAtual === 'light' ? t.glassButtonText : t.textSecondary }}>
-                  ☀️ Claro
+                  Modo Claro
                 </Text>
               </TouchableOpacity>
 
@@ -1353,14 +1351,14 @@ export default function App() {
                 onPress={() => setTemaAtual('dark')}
               >
                 <Text style={{ fontWeight: 'bold', color: temaAtual === 'dark' ? t.glassButtonText : t.textSecondary }}>
-                  🌙 Escuro
+                  Modo Escuro
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
             <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              📌 NAVEGAÇÃO PRINCIPAL
+              NAVEGAÇÃO PRINCIPAL
             </Text>
 
             <TouchableOpacity
@@ -1379,7 +1377,7 @@ export default function App() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'novo' ? t.glassButtonText : t.textPrimary }}>
-                🏋️ Gerar Novo Treino
+                Gerar Novo Treino
               </Text>
             </TouchableOpacity>
 
@@ -1399,7 +1397,7 @@ export default function App() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'historico' ? t.glassButtonText : t.textPrimary }}>
-                💪 Meu Treino Ativo
+                Meu Treino Ativo
               </Text>
             </TouchableOpacity>
 
@@ -1419,7 +1417,7 @@ export default function App() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'cronometro' ? t.glassButtonText : t.textPrimary }}>
-                ⏱️ Cronômetro & Descanso
+                Cronômetro & Descanso
               </Text>
             </TouchableOpacity>
 
@@ -1439,7 +1437,7 @@ export default function App() {
               }}
             >
               <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 14 }}>
-                Sair da Conta 🚪
+                Sair da Conta
               </Text>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -1450,7 +1448,7 @@ export default function App() {
       <Modal visible={modalSubstituicaoVisivel} transparent animationType="fade">
         <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
           <View style={[styles.modalContainer, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.modalTitle, { color: t.textPrimary }]}>🔄 Substituir Exercício</Text>
+            <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Substituir Exercício</Text>
 
             {exercicioParaSubstituir && (
               <Text style={[styles.modalSubTitle, { color: t.textSecondary }]}>
@@ -1491,7 +1489,7 @@ export default function App() {
                   ]}
                   onPress={handleExecutarSubstituicao}
                 >
-                  <Text style={[styles.modalBtnText, { color: t.glassButtonText }]}>Trocar Exercício 🔄</Text>
+                  <Text style={[styles.modalBtnText, { color: t.glassButtonText }]}>Trocar Exercício</Text>
                 </TouchableOpacity>
               </View>
             )}
