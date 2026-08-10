@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { supabase } from './supabase';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from '../types/index';
 
 // Detecta o IP da sua máquina automaticamente quando o app roda no celular físico via Expo Go (Wi-Fi)
@@ -7,6 +8,16 @@ const host = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
 const API_URL = `http://${host}:3333/api`;
 
 console.log('🔗 Conectando na API Backend:', API_URL);
+
+// Função para obter cabeçalhos com Token JWT de Autenticação do Supabase
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || '';
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+}
 
 export async function executarCadastroApi(
   email: string,
@@ -46,7 +57,11 @@ export async function executarLoginApi(
 }
 
 export async function buscarTreinoAtivo(userId: string): Promise<any | null> {
-  const response = await fetch(`${API_URL}/meus-treinos/${userId}`);
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/meus-treinos/${userId}`, {
+    headers,
+  });
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || 'Erro ao buscar treino ativo.');
@@ -60,11 +75,10 @@ export async function enviarAvaliacaoAnamnese(
   fotos: ImagemFoto[],
   userId?: string
 ): Promise<AvaliacaoFisica> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/avaliar`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
       anamnese,
       fotos: fotos.map((f) => ({
@@ -91,11 +105,10 @@ export async function solicitarGeracaoTreino(
   alunoId?: string,
   avaliacaoId?: string
 ): Promise<FichaTreino> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/gerar-treino`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
       anamnese,
       avaliacao,
@@ -119,11 +132,10 @@ export async function solicitarSubstituicaoExercicio(
   objetivo: string,
   motivoSubstituicao?: string
 ): Promise<{ exercicio_substituto: any; motivo_escolha: string }> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/substituir-exercicio`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({
       exercicioOriginal,
       objetivo,

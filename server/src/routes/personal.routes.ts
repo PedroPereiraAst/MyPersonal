@@ -1,12 +1,29 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { GeminiService, type AnamneseInput, type ImagemInput } from '../services/gemini.service.js';
 import { SupabaseService } from '../services/supabase.service.js';
 import type { AvaliacaoFisica, ExercicioItem } from '../types/schemas.js';
 
 export async function personalRoutes(fastify: FastifyInstance) {
 
+  // Middleware de Proteção e Validação de Sessão do Usuário
+  const autenticarUsuario = async (request: FastifyRequest, reply: FastifyReply) => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return reply.status(401).send({ error: 'Acesso não autorizado. Faça login no aplicativo.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const user = await SupabaseService.verificarTokenJWT(token);
+
+    if (!user) {
+      return reply.status(401).send({ error: 'Sessão expirada ou token inválido. Faça login novamente.' });
+    }
+
+    (request as any).user = user;
+  };
+
   /**
-   * ROTA DE CADASTRO (SUPABASE AUTH VIA SERVIDOR)
+   * ROTA PÚBLICA DE CADASTRO
    * POST /api/auth/cadastro
    */
   fastify.post<{
@@ -27,7 +44,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * ROTA DE LOGIN (SUPABASE AUTH VIA SERVIDOR)
+   * ROTA PÚBLICA DE LOGIN
    * POST /api/auth/login
    */
   fastify.post<{
@@ -48,14 +65,15 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * ROTA PARA CONSULTAR O TREINO ATIVO DO USUÁRIO
+   * ROTA PROTEGIDA PARA CONSULTAR O TREINO ATIVO DO USUÁRIO
    * GET /api/meus-treinos/:userId
    */
   fastify.get<{
     Params: { userId: string };
-  }>('/meus-treinos/:userId', async (request, reply) => {
+  }>('/meus-treinos/:userId', { preHandler: autenticarUsuario }, async (request, reply) => {
     try {
-      const { userId } = request.params;
+      const authenticatedUser = (request as any).user;
+      const userId = authenticatedUser.id; // Extrai o ID diretamente do token verificado
       const treinoAtivo = await SupabaseService.buscarTreinoAtivoDoUsuario(userId);
       return reply.status(200).send({ treinoAtivo });
     } catch (error: any) {
@@ -65,7 +83,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
   
   /**
-   * ROTA 1: FASE 1 - Avaliação Física via Fotos + Anamnese
+   * ROTA PROTEGIDA 1: FASE 1 - Avaliação Física via Fotos + Anamnese
    * POST /api/avaliar
    */
   fastify.post<{
@@ -74,9 +92,11 @@ export async function personalRoutes(fastify: FastifyInstance) {
       fotos: ImagemInput[];
       userId?: string;
     };
-  }>('/avaliar', async (request, reply) => {
+  }>('/avaliar', { preHandler: autenticarUsuario }, async (request, reply) => {
     try {
-      const { anamnese, fotos, userId } = request.body;
+      const { anamnese, fotos } = request.body;
+      const authenticatedUser = (request as any).user;
+      const userId = authenticatedUser.id;
 
       if (!anamnese || !fotos || fotos.length === 0) {
         return reply.status(400).send({
@@ -87,7 +107,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
       // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
       const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
 
-      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante) VINCULANDO O USER_ID
+      // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante) VINCULANDO O USER_ID AUTENTICADO
       SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao, userId).catch((err) => {
         console.warn('⚠️ Alerta não-bloqueante ao salvar no Supabase:', err.message);
       });
@@ -103,7 +123,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * ROTA 2: FASE 3 - Prescrição da Ficha de Treino
+   * ROTA PROTEGIDA 2: FASE 3 - Prescrição da Ficha de Treino
    * POST /api/gerar-treino
    */
   fastify.post<{
@@ -113,7 +133,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
       alunoId?: string;
       avaliacaoId?: string;
     };
-  }>('/gerar-treino', async (request, reply) => {
+  }>('/gerar-treino', { preHandler: autenticarUsuario }, async (request, reply) => {
     try {
       const { anamnese, avaliacao, alunoId, avaliacaoId } = request.body;
 
@@ -142,7 +162,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * ROTA 3: RECURSO EXCLUSIVO - Substituição Individual de Exercício
+   * ROTA PROTEGIDA 3: RECURSO EXCLUSIVO - Substituição Individual de Exercício
    * POST /api/substituir-exercicio
    */
   fastify.post<{
@@ -151,7 +171,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
       objetivo: string;
       motivoSubstituicao?: string;
     };
-  }>('/substituir-exercicio', async (request, reply) => {
+  }>('/substituir-exercicio', { preHandler: autenticarUsuario }, async (request, reply) => {
     try {
       const { exercicioOriginal, objetivo, motivoSubstituicao } = request.body;
 

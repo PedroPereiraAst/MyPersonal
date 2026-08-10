@@ -61,6 +61,23 @@ export class SupabaseService {
   }
 
   /**
+   * Verificar Token JWT do Usuário Autenticado no Supabase Auth
+   */
+  static async verificarTokenJWT(token: string) {
+    try {
+      const client = getSupabaseClient();
+      if (!client) return null;
+
+      const { data: { user }, error } = await client.auth.getUser(token);
+      if (error || !user) return null;
+
+      return user;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Buscar Ficha de Treino Ativa Única do Usuário no PostgreSQL do Supabase
    */
   static async buscarTreinoAtivoDoUsuario(userId: string) {
@@ -68,7 +85,6 @@ export class SupabaseService {
       const client = getSupabaseClient();
       if (!client) return null;
 
-      // Buscar primeiro os alunos pertencentes a este user_id
       const { data: alunos } = await client
         .from('alunos')
         .select('id')
@@ -85,7 +101,6 @@ export class SupabaseService {
       const { data: treinos, error } = await query;
 
       if (error || !treinos || treinos.length === 0) {
-        // Fallback: tentar buscar sem filtro se não encontrou por aluno_id
         const { data: todosTreinos } = await client
           .from('treinos')
           .select('*')
@@ -110,7 +125,6 @@ export class SupabaseService {
       const client = getSupabaseClient();
       if (!client) return null;
 
-      // 1. Inserir Aluno com user_id do Supabase Auth
       const { data: aluno, error: errAluno } = await client
         .from('alunos')
         .insert({
@@ -130,7 +144,6 @@ export class SupabaseService {
         return null;
       }
 
-      // 2. Inserir Avaliação
       const { data: registroAvaliacao, error: errAvaliacao } = await client
         .from('avaliacoes')
         .insert({
