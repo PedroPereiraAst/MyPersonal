@@ -92,8 +92,8 @@ export default function App() {
   const [senhaAuth, setSenhaAuth] = useState('');
   const [carregandoAuth, setCarregandoAuth] = useState(false);
 
-  // Navegação Principal controlada EXCLUSIVAMENTE pelo Menu Lateral: 'novo' vs 'historico'
-  const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico'>('novo');
+  // Navegação Principal controlada EXCLUSIVAMENTE pelo Menu Lateral: 'novo' vs 'historico' vs 'cronometro'
+  const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico' | 'cronometro'>('novo');
 
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
   const [faseAtual, setFaseAtual] = useState<1 | 2 | 3>(1);
@@ -103,6 +103,18 @@ export default function App() {
   const [treinoAtivoSalvo, setTreinoAtivoSalvo] = useState<any | null>(null);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const [sessaoAtivaIndex, setSessaoAtivaIndex] = useState<number>(0);
+
+  // --- ESTADOS DO CRONÔMETRO DE TREINO E TIMER DE DESCANSO (PERSISTÊNCIA EM SEGUNDO PLANO VIA TIMESTAMP) ---
+  const [treinoIniciado, setTreinoIniciado] = useState(false);
+  const [treinoPausado, setTreinoPausado] = useState(false);
+  const [timestampInicioTreino, setTimestampInicioTreino] = useState<number | null>(null);
+  const [tempoTreinoSegundos, setTempoTreinoSegundos] = useState(0);
+
+  // Timer de Descanso
+  const [descansoDuracaoSegundos, setDescansoDuracaoSegundos] = useState<number>(60); // 30, 60 (1:00) ou 90 (1:30)
+  const [timestampFimDescanso, setTimestampFimDescanso] = useState<number | null>(null);
+  const [descansoSegundosRestantes, setDescansoSegundosRestantes] = useState<number>(60);
+  const [descansoAtivo, setDescansoAtivo] = useState(false);
 
   // Estado do Formulário de Anamnese
   const [nome, setNome] = useState('');
@@ -161,6 +173,34 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // LOOPER EM SEGUNDO PLANO (TIMESTAMP-BASED TIME TRACKING)
+  // Garante que o Cronômetro e o Rest Timer funcionem 100% mesmo com o app minimizado ou em segundo plano!
+  useEffect(() => {
+    const timerInterval = setInterval(() => {
+      const agora = Date.now();
+
+      // 1. Atualizar Tempo Total de Treino Decorrido
+      if (treinoIniciado && !treinoPausado && timestampInicioTreino) {
+        const decorrido = Math.floor((agora - timestampInicioTreino) / 1000);
+        setTempoTreinoSegundos(decorrido);
+      }
+
+      // 2. Atualizar Contagem Regressiva do Timer de Descanso
+      if (descansoAtivo && timestampFimDescanso) {
+        const restante = Math.max(0, Math.ceil((timestampFimDescanso - agora) / 1000));
+        setDescansoSegundosRestantes(restante);
+
+        if (restante === 0) {
+          setDescansoAtivo(false);
+          setTimestampFimDescanso(null);
+          Alert.alert('⏰ Fim do Descanso!', 'Hora de iniciar a próxima série!');
+        }
+      }
+    }, 500);
+
+    return () => clearInterval(timerInterval);
+  }, [treinoIniciado, treinoPausado, timestampInicioTreino, descansoAtivo, timestampFimDescanso]);
+
   // Carregar o Treino Ativo do Supabase quando a aba 'historico' for aberta
   useEffect(() => {
     if (session?.user && abaPrincipal === 'historico') {
@@ -180,6 +220,78 @@ export default function App() {
     } finally {
       setCarregandoHistorico(false);
     }
+  };
+
+  // Funções de Controle do Cronômetro de Treino Total
+  const handleIniciarOuContinuarTreino = () => {
+    const agora = Date.now();
+    if (!treinoIniciado) {
+      setTreinoIniciado(true);
+      setTreinoPausado(false);
+      setTimestampInicioTreino(agora - tempoTreinoSegundos * 1000);
+    } else if (treinoPausado) {
+      setTreinoPausado(false);
+      setTimestampInicioTreino(agora - tempoTreinoSegundos * 1000);
+    }
+  };
+
+  const handlePausarTreino = () => {
+    setTreinoPausado(true);
+  };
+
+  const handleFinalizarTreino = () => {
+    Alert.alert(
+      '⏹️ Finalizar Treino',
+      `Parabéns pelo treino! Duração total: ${formatarTempo(tempoTreinoSegundos)}.\nDeseja encerrar o cronômetro?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Encerrar Treino',
+          style: 'destructive',
+          onPress: () => {
+            setTreinoIniciado(false);
+            setTreinoPausado(false);
+            setTempoTreinoSegundos(0);
+            setTimestampInicioTreino(null);
+            setDescansoAtivo(false);
+          },
+        },
+      ]
+    );
+  };
+
+  // Funções de Controle do Timer de Descanso
+  const handleIniciarDescanso = (segundos: number) => {
+    const agora = Date.now();
+    setDescansoDuracaoSegundos(segundos);
+    setTimestampFimDescanso(agora + segundos * 1000);
+    setDescansoSegundosRestantes(segundos);
+    setDescansoAtivo(true);
+  };
+
+  const handlePausarDescanso = () => {
+    setDescansoAtivo(false);
+    setTimestampFimDescanso(null);
+  };
+
+  const handleResetarDescanso = () => {
+    setDescansoAtivo(false);
+    setTimestampFimDescanso(null);
+    setDescansoSegundosRestantes(descansoDuracaoSegundos);
+  };
+
+  // Formatar Segundos em HH:MM:SS ou MM:SS
+  const formatarTempo = (totalSegundos: number) => {
+    const hrs = Math.floor(totalSegundos / 3600);
+    const mins = Math.floor((totalSegundos % 3600) / 60);
+    const secs = totalSegundos % 60;
+
+    const pad = (num: number) => String(num).padStart(2, '0');
+
+    if (hrs > 0) {
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
   };
 
   // Executar Login via Rota Backend Confiável
@@ -250,6 +362,7 @@ export default function App() {
     setResultadoAvaliacao(null);
     setResultadoTreino(null);
     setTreinoAtivoSalvo(null);
+    setTreinoIniciado(false);
   };
 
   // Função para tirar/selecionar foto
@@ -544,6 +657,190 @@ export default function App() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ABA 3: CRONÔMETRO DE TREINO & TIMER DE DESCANSO (PERSISTÊNCIA EM SEGUNDO PLANO) */}
+      {abaPrincipal === 'cronometro' && (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* CARD 1: CRONÔMETRO DO TEMPO TOTAL DE TREINO */}
+          <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder, marginBottom: 16 }]}>
+            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>⏱️ Tempo Total de Treino</Text>
+            <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 15 }}>
+              Contabilize a duração total da sua sessão na academia.
+            </Text>
+
+            {/* RELÓGIO DIGITAL GRANDE */}
+            <View
+              style={{
+                alignItems: 'center',
+                paddingVertical: 20,
+                backgroundColor: t.inputBg,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: t.cardBorder,
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ fontSize: 44, fontWeight: 'bold', color: t.accentGreen, letterSpacing: 2 }}>
+                {formatarTempo(tempoTreinoSegundos)}
+              </Text>
+              <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
+                {!treinoIniciado ? 'Pronto para iniciar' : treinoPausado ? '⏸️ Treino Pausado' : '⚡ Treino em Andamento'}
+              </Text>
+            </View>
+
+            {/* CONTROLES DO CRONÔMETRO TOTAL */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {!treinoIniciado || treinoPausado ? (
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    {
+                      flex: 1,
+                      marginTop: 0,
+                      backgroundColor: t.glassButtonBg,
+                      borderColor: t.glassButtonBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={handleIniciarOuContinuarTreino}
+                >
+                  <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
+                    {!treinoIniciado ? '▶️ Iniciar Treino' : '▶️ Continuar'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
+                  ]}
+                  onPress={handlePausarTreino}
+                >
+                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar</Text>
+                </TouchableOpacity>
+              )}
+
+              {treinoIniciado && (
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    { flex: 1, marginTop: 0, backgroundColor: '#ef4444', borderWidth: 0 },
+                  ]}
+                  onPress={handleFinalizarTreino}
+                >
+                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏹️ Finalizar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* CARD 2: TIMER DE DESCANSO ENTRE SÉRIES */}
+          <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>🔔 Timer de Descanso Entre Séries</Text>
+            <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 12 }}>
+              Selecione o tempo de pausa e ative a contagem regressiva:
+            </Text>
+
+            {/* PRESETS RÁPIDOS (30s, 1:00 min, 1:30 min) */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              {[
+                { label: '30s', val: 30 },
+                { label: '1:00 min', val: 60 },
+                { label: '1:30 min', val: 90 },
+              ].map((p) => {
+                const isSelected = descansoDuracaoSegundos === p.val;
+                return (
+                  <TouchableOpacity
+                    key={p.val}
+                    style={[
+                      styles.dayChip,
+                      {
+                        flex: 1,
+                        alignItems: 'center',
+                        backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
+                        borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
+                      },
+                    ]}
+                    onPress={() => handleIniciarDescanso(p.val)}
+                  >
+                    <Text
+                      style={[
+                        styles.dayChipText,
+                        { color: isSelected ? t.glassButtonText : t.textSecondary },
+                      ]}
+                    >
+                      {p.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* RELÓGIO REGRESSIVO DIGITAL DO DESCANSO */}
+            <View
+              style={{
+                alignItems: 'center',
+                paddingVertical: 20,
+                backgroundColor: t.inputBg,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: t.cardBorder,
+                marginBottom: 16,
+              }}
+            >
+              <Text style={{ fontSize: 40, fontWeight: 'bold', color: t.accentCyan, letterSpacing: 2 }}>
+                {formatarTempo(descansoSegundosRestantes)}
+              </Text>
+              <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
+                {descansoAtivo ? '⏳ Descansando em segundo plano...' : 'Selecione uma opção acima para iniciar'}
+              </Text>
+            </View>
+
+            {/* BOTOES DE AÇÃO DO DESCANSO */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {descansoAtivo ? (
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
+                  ]}
+                  onPress={handlePausarDescanso}
+                >
+                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar Pausa</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    {
+                      flex: 1,
+                      marginTop: 0,
+                      backgroundColor: t.glassButtonBg,
+                      borderColor: t.glassButtonBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={() => handleIniciarDescanso(descansoDuracaoSegundos)}
+                >
+                  <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
+                    ▶️ Iniciar Descanso
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  { flex: 1, marginTop: 0, backgroundColor: t.inputBg, borderColor: t.cardBorder, borderWidth: 1 },
+                ]}
+                onPress={handleResetarDescanso}
+              >
+                <Text style={[styles.primaryButtonText, { color: t.textSecondary }]}>↺ Resetar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      )}
 
       {/* ABA 2: MEU TREINO ATIVO NO SUPABASE (SAMSUNG ONE UI 8.5 CAPSULES) */}
       {abaPrincipal === 'historico' && (
@@ -991,9 +1288,6 @@ export default function App() {
               <Text style={{ fontSize: 22, fontWeight: 'bold', color: t.textPrimary }}>
                 🏋️ MyPersonal
               </Text>
-              <Text style={{ fontSize: 12, color: t.accentGreen, fontWeight: 'bold', marginTop: 2 }}>
-                Samsung One UI 8.5 • Liquid Glass
-              </Text>
               <Text style={{ fontSize: 13, color: t.textSecondary, marginTop: 10 }}>
                 {nome || session?.user?.email}
               </Text>
@@ -1073,7 +1367,7 @@ export default function App() {
                 backgroundColor: abaPrincipal === 'historico' ? t.glassButtonBg : t.inputBg,
                 borderColor: abaPrincipal === 'historico' ? t.glassButtonBorder : 'transparent',
                 borderWidth: 1,
-                marginBottom: 20,
+                marginBottom: 8,
               }}
               onPress={() => {
                 setAbaPrincipal('historico');
@@ -1082,6 +1376,26 @@ export default function App() {
             >
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'historico' ? t.glassButtonText : t.textPrimary }}>
                 💪 Meu Treino Ativo
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                borderRadius: 16,
+                backgroundColor: abaPrincipal === 'cronometro' ? t.glassButtonBg : t.inputBg,
+                borderColor: abaPrincipal === 'cronometro' ? t.glassButtonBorder : 'transparent',
+                borderWidth: 1,
+                marginBottom: 20,
+              }}
+              onPress={() => {
+                setAbaPrincipal('cronometro');
+                setMenuLateralVisivel(false);
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'cronometro' ? t.glassButtonText : t.textPrimary }}>
+                ⏱️ Cronômetro & Descanso
               </Text>
             </TouchableOpacity>
 
