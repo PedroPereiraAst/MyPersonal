@@ -240,24 +240,31 @@ export default function App() {
   };
 
   const handleFinalizarTreino = () => {
-    Alert.alert(
-      '⏹️ Finalizar Treino',
-      `Parabéns pelo treino! Duração total: ${formatarTempo(tempoTreinoSegundos)}.\nDeseja encerrar o cronômetro?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Encerrar Treino',
-          style: 'destructive',
-          onPress: () => {
-            setTreinoIniciado(false);
-            setTreinoPausado(false);
-            setTempoTreinoSegundos(0);
-            setTimestampInicioTreino(null);
-            setDescansoAtivo(false);
-          },
-        },
-      ]
-    );
+    const tempoFormatado = formatarTempo(tempoTreinoSegundos);
+
+    const encerrar = () => {
+      setTreinoIniciado(false);
+      setTreinoPausado(false);
+      setTempoTreinoSegundos(0);
+      setTimestampInicioTreino(null);
+      setDescansoAtivo(false);
+      setTimestampFimDescanso(null);
+    };
+
+    if (typeof window !== 'undefined' && typeof (window as any).confirm === 'function') {
+      if ((window as any).confirm(`⏹️ Finalizar Treino\n\nParabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`)) {
+        encerrar();
+      }
+    } else {
+      Alert.alert(
+        '⏹️ Finalizar Treino',
+        `Parabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Encerrar Treino', style: 'destructive', onPress: encerrar },
+        ]
+      );
+    }
   };
 
   // Funções de Controle do Timer de Descanso
@@ -524,9 +531,6 @@ export default function App() {
         <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }}>
           <View style={[styles.authCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <Text style={[styles.authLogo, { color: t.accentGreen }]}>🏋️ MyPersonal</Text>
-            <Text style={[styles.authSubtitle, { color: t.textSecondary }]}>
-              Samsung One UI 8.5 Liquid Glass • Personal AI Coach
-            </Text>
 
             <View style={[styles.authTabContainer, { backgroundColor: t.inputBg }]}>
               <TouchableOpacity
@@ -690,7 +694,7 @@ export default function App() {
 
             {/* CONTROLES DO CRONÔMETRO TOTAL */}
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {!treinoIniciado || treinoPausado ? (
+              {!treinoIniciado ? (
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
@@ -705,31 +709,51 @@ export default function App() {
                   onPress={handleIniciarOuContinuarTreino}
                 >
                   <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                    {!treinoIniciado ? '▶️ Iniciar Treino' : '▶️ Continuar'}
+                    ▶️ Iniciar Treino
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
-                  ]}
-                  onPress={handlePausarTreino}
-                >
-                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar</Text>
-                </TouchableOpacity>
-              )}
+                <>
+                  {treinoPausado ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryButton,
+                        {
+                          flex: 1,
+                          marginTop: 0,
+                          backgroundColor: t.glassButtonBg,
+                          borderColor: t.glassButtonBorder,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      onPress={handleIniciarOuContinuarTreino}
+                    >
+                      <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
+                        ▶️ Continuar
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryButton,
+                        { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
+                      ]}
+                      onPress={handlePausarTreino}
+                    >
+                      <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏸️ Pausar</Text>
+                    </TouchableOpacity>
+                  )}
 
-              {treinoIniciado && (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { flex: 1, marginTop: 0, backgroundColor: '#ef4444', borderWidth: 0 },
-                  ]}
-                  onPress={handleFinalizarTreino}
-                >
-                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏹️ Finalizar</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      { flex: 1, marginTop: 0, backgroundColor: '#ef4444', borderWidth: 0 },
+                    ]}
+                    onPress={handleFinalizarTreino}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>⏹️ Finalizar</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
           </View>
