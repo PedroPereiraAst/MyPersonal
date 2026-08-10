@@ -25,45 +25,53 @@ import {
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 
-// PROVEDOR DE TEMA SAMSUNG ONE UI 8.5 (DARK MODE & LIGHT MODE)
+// PROVEDOR DE TEMA SAMSUNG ONE UI 8.5 COM EFEITO LIQUID GLASS TRANSLÚCIDO
 const THEMES = {
   dark: {
-    bg: '#0b101d',
-    card: '#161e31',
-    cardBorder: '#232f48',
+    bg: '#090d16',
+    card: 'rgba(22, 30, 49, 0.85)',
+    cardBorder: 'rgba(255, 255, 255, 0.12)',
     textPrimary: '#f8fafc',
     textSecondary: '#94a3b8',
-    inputBg: '#0f172a',
-    inputBorder: '#334155',
+    inputBg: 'rgba(15, 23, 42, 0.75)',
+    inputBorder: 'rgba(255, 255, 255, 0.12)',
     accentGreen: '#00e676',
     accentGreenDark: '#00c853',
+    glassButtonBg: 'rgba(0, 230, 118, 0.20)',
+    glassButtonBorder: 'rgba(0, 230, 118, 0.45)',
+    glassButtonText: '#00e676',
     accentCyan: '#00b0ff',
-    pillBg: '#0f172a',
-    pillActiveBg: '#00c853',
+    pillBg: 'rgba(15, 23, 42, 0.75)',
+    pillActiveBg: 'rgba(0, 230, 118, 0.25)',
+    pillActiveBorder: '#00e676',
     pillActiveText: '#ffffff',
     modalBg: '#161e31',
     overlayBg: 'rgba(5, 9, 17, 0.85)',
-    headerBg: '#161e31',
+    headerBg: 'rgba(22, 30, 49, 0.92)',
     drawerBg: '#111827',
     statusBar: 'light-content' as const,
   },
   light: {
     bg: '#f4f6f9',
-    card: '#ffffff',
-    cardBorder: '#e2e8f0',
+    card: 'rgba(255, 255, 255, 0.90)',
+    cardBorder: 'rgba(0, 0, 0, 0.08)',
     textPrimary: '#0f172a',
     textSecondary: '#64748b',
-    inputBg: '#f8fafc',
-    inputBorder: '#cbd5e1',
+    inputBg: 'rgba(248, 250, 252, 0.90)',
+    inputBorder: 'rgba(203, 213, 225, 0.8)',
     accentGreen: '#00c853',
     accentGreenDark: '#00a843',
+    glassButtonBg: 'rgba(0, 200, 83, 0.15)',
+    glassButtonBorder: 'rgba(0, 200, 83, 0.45)',
+    glassButtonText: '#00a843',
     accentCyan: '#0284c7',
-    pillBg: '#e2e8f0',
+    pillBg: 'rgba(226, 232, 240, 0.80)',
     pillActiveBg: '#00c853',
+    pillActiveBorder: '#00c853',
     pillActiveText: '#ffffff',
     modalBg: '#ffffff',
     overlayBg: 'rgba(15, 23, 42, 0.65)',
-    headerBg: '#ffffff',
+    headerBg: 'rgba(255, 255, 255, 0.95)',
     drawerBg: '#ffffff',
     statusBar: 'dark-content' as const,
   },
@@ -84,7 +92,7 @@ export default function App() {
   const [senhaAuth, setSenhaAuth] = useState('');
   const [carregandoAuth, setCarregandoAuth] = useState(false);
 
-  // Navegação Principal da Aplicação: 'novo' (Formulário + Ficha) vs 'historico' (Meu Treino Ativo)
+  // Navegação Principal controlada EXCLUSIVAMENTE pelo Menu Lateral: 'novo' vs 'historico'
   const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico'>('novo');
 
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
@@ -404,23 +412,47 @@ export default function App() {
           <View style={[styles.authCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <Text style={[styles.authLogo, { color: t.accentGreen }]}>🏋️ MyPersonal</Text>
             <Text style={[styles.authSubtitle, { color: t.textSecondary }]}>
-              Samsung One UI 8.5 Edition • Personal AI Coach
+              Samsung One UI 8.5 Liquid Glass • Personal AI Coach
             </Text>
 
             <View style={[styles.authTabContainer, { backgroundColor: t.inputBg }]}>
               <TouchableOpacity
-                style={[styles.authTab, abaAuth === 'login' && { backgroundColor: t.accentGreen }]}
+                style={[
+                  styles.authTab,
+                  abaAuth === 'login' && {
+                    backgroundColor: t.glassButtonBg,
+                    borderColor: t.glassButtonBorder,
+                    borderWidth: 1,
+                  },
+                ]}
                 onPress={() => setAbaAuth('login')}
               >
-                <Text style={[styles.authTabText, abaAuth === 'login' ? { color: '#fff' } : { color: t.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.authTabText,
+                    abaAuth === 'login' ? { color: t.glassButtonText } : { color: t.textSecondary },
+                  ]}
+                >
                   Entrar
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.authTab, abaAuth === 'cadastro' && { backgroundColor: t.accentGreen }]}
+                style={[
+                  styles.authTab,
+                  abaAuth === 'cadastro' && {
+                    backgroundColor: t.glassButtonBg,
+                    borderColor: t.glassButtonBorder,
+                    borderWidth: 1,
+                  },
+                ]}
                 onPress={() => setAbaAuth('cadastro')}
               >
-                <Text style={[styles.authTabText, abaAuth === 'cadastro' ? { color: '#fff' } : { color: t.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.authTabText,
+                    abaAuth === 'cadastro' ? { color: t.glassButtonText } : { color: t.textSecondary },
+                  ]}
+                >
                   Criar Conta
                 </Text>
               </TouchableOpacity>
@@ -464,10 +496,17 @@ export default function App() {
               <ActivityIndicator size="large" color={t.accentGreen} style={{ marginTop: 15 }} />
             ) : (
               <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: t.accentGreen }]}
+                style={[
+                  styles.primaryButton,
+                  {
+                    backgroundColor: t.glassButtonBg,
+                    borderColor: t.glassButtonBorder,
+                    borderWidth: 1,
+                  },
+                ]}
                 onPress={abaAuth === 'login' ? handleLogin : handleCadastro}
               >
-                <Text style={styles.primaryButtonText}>
+                <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
                   {abaAuth === 'login' ? 'Entrar no App ➔' : 'Criar Minha Conta ⚡'}
                 </Text>
               </TouchableOpacity>
@@ -478,12 +517,12 @@ export default function App() {
     );
   }
 
-  // TELA PRINCIPAL (USUÁRIO AUTENTICADO COM SAMSUNG ONE UI 8.5 DESIGN)
+  // TELA PRINCIPAL (USUÁRIO AUTENTICADO COM SAMSUNG ONE UI 8.5 & CLEAN HEADER)
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
       <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
 
-      {/* HEADER PRINCIPAL COM BOTÃO DO MENU LATERAL (DRAWER ☰) */}
+      {/* HEADER LIMPO COM TÍTULO, SAUDAÇÃO E BOTÃO DE MENU LIQUID GLASS (☰ MENU) */}
       <View style={[styles.header, { backgroundColor: t.headerBg, borderColor: t.cardBorder }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
@@ -491,30 +530,17 @@ export default function App() {
             <Text style={[styles.headerUserText, { color: t.accentGreen }]}>Olá, {nome || session.user.email} 👋</Text>
           </View>
           <TouchableOpacity
-            style={[styles.menuBtn, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]}
+            style={[
+              styles.menuBtn,
+              {
+                backgroundColor: t.glassButtonBg,
+                borderColor: t.glassButtonBorder,
+                borderWidth: 1,
+              },
+            ]}
             onPress={() => setMenuLateralVisivel(true)}
           >
-            <Text style={[styles.menuBtnText, { color: t.textPrimary }]}>☰ Menu</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* NAVEGAÇÃO SUPERIOR DE ABAS: NOVO TREINO vs MEU TREINO ATIVO */}
-        <View style={[styles.mainNavContainer, { backgroundColor: t.inputBg }]}>
-          <TouchableOpacity
-            style={[styles.mainNavTab, abaPrincipal === 'novo' && { backgroundColor: t.accentGreen }]}
-            onPress={() => setAbaPrincipal('novo')}
-          >
-            <Text style={[styles.mainNavTabText, abaPrincipal === 'novo' ? { color: '#fff' } : { color: t.textSecondary }]}>
-              🏋️ Novo Treino
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.mainNavTab, abaPrincipal === 'historico' && { backgroundColor: t.accentGreen }]}
-            onPress={() => setAbaPrincipal('historico')}
-          >
-            <Text style={[styles.mainNavTabText, abaPrincipal === 'historico' ? { color: '#fff' } : { color: t.textSecondary }]}>
-              💪 Meu Treino Ativo
-            </Text>
+            <Text style={[styles.menuBtnText, { color: t.glassButtonText }]}>☰ Menu</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -537,7 +563,7 @@ export default function App() {
                 <Text style={{ fontSize: 36, marginBottom: 10 }}>🏋️‍♂️</Text>
                 <Text style={{ color: t.textPrimary, fontWeight: 'bold', fontSize: 16 }}>Nenhum treino ativo encontrado</Text>
                 <Text style={{ color: t.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
-                  Preencha sua anamnese na aba "Novo Treino" para gerar sua primeira ficha inteligente!
+                  Abra o Menu ☰ no topo e selecione "Gerar Novo Treino" para prescrever sua primeira ficha inteligente!
                 </Text>
               </View>
             ) : (
@@ -552,7 +578,7 @@ export default function App() {
                       Divisão: <Text style={{ color: t.accentGreen, fontWeight: 'bold' }}>{tData?.divisao_nome}</Text> | {tData?.frequencia_semanal}x por semana
                     </Text>
 
-                    {/* SELEÇÃO DE DIAS DE TREINO (TREINO A, B, C...) EM CÁPSULAS ONE UI */}
+                    {/* SELEÇÃO DE DIAS DE TREINO (TREINO A, B, C...) EM CÁPSULAS LIQUID GLASS */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         {sessoes.map((s: any, idx: number) => {
@@ -564,11 +590,19 @@ export default function App() {
                               key={idx}
                               style={[
                                 styles.dayChip,
-                                { backgroundColor: isSelected ? t.accentGreen : t.inputBg, borderColor: t.cardBorder },
+                                {
+                                  backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
+                                  borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
+                                },
                               ]}
                               onPress={() => setSessaoAtivaIndex(idx)}
                             >
-                              <Text style={[styles.dayChipText, { color: isSelected ? '#ffffff' : t.textSecondary }]}>
+                              <Text
+                                style={[
+                                  styles.dayChipText,
+                                  { color: isSelected ? t.glassButtonText : t.textSecondary },
+                                ]}
+                              >
                                 Treino {letraDia}
                               </Text>
                             </TouchableOpacity>
@@ -587,10 +621,17 @@ export default function App() {
                             <View style={styles.exerciseHeader}>
                               <Text style={[styles.exerciseName, { color: t.textPrimary }]}>{eIdx + 1}. {ex.nome}</Text>
                               <TouchableOpacity
-                                style={[styles.replaceBtn, { backgroundColor: t.accentGreen }]}
+                                style={[
+                                  styles.replaceBtn,
+                                  {
+                                    backgroundColor: t.glassButtonBg,
+                                    borderColor: t.glassButtonBorder,
+                                    borderWidth: 1,
+                                  },
+                                ]}
                                 onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex, true)}
                               >
-                                <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
+                                <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>🔄 Trocar</Text>
                               </TouchableOpacity>
                             </View>
 
@@ -670,10 +711,16 @@ export default function App() {
                     {listaObjetivos.map((item) => (
                       <TouchableOpacity
                         key={item}
-                        style={[styles.chip, { backgroundColor: objetivo === item ? t.accentGreen : t.inputBg, borderColor: t.cardBorder }]}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: objetivo === item ? t.glassButtonBg : t.inputBg,
+                            borderColor: objetivo === item ? t.glassButtonBorder : t.cardBorder,
+                          },
+                        ]}
                         onPress={() => setObjetivo(item)}
                       >
-                        <Text style={[styles.chipText, { color: objetivo === item ? '#ffffff' : t.textSecondary }]}>{item}</Text>
+                        <Text style={[styles.chipText, { color: objetivo === item ? t.glassButtonText : t.textSecondary }]}>{item}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -684,10 +731,16 @@ export default function App() {
                     {listaNiveis.map((item) => (
                       <TouchableOpacity
                         key={item}
-                        style={[styles.chip, { backgroundColor: nivel === item ? t.accentGreen : t.inputBg, borderColor: t.cardBorder }]}
+                        style={[
+                          styles.chip,
+                          {
+                            backgroundColor: nivel === item ? t.glassButtonBg : t.inputBg,
+                            borderColor: nivel === item ? t.glassButtonBorder : t.cardBorder,
+                          },
+                        ]}
                         onPress={() => setNivel(item)}
                       >
-                        <Text style={[styles.chipText, { color: nivel === item ? '#ffffff' : t.textSecondary }]}>{item}</Text>
+                        <Text style={[styles.chipText, { color: nivel === item ? t.glassButtonText : t.textSecondary }]}>{item}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -708,16 +761,28 @@ export default function App() {
                   <Text style={[styles.label, { marginTop: 15, color: t.textSecondary }]}>Você já passou por consulta com nutricionista?</Text>
                   <View style={styles.rowButtons}>
                     <TouchableOpacity
-                      style={[styles.toggleBtn, { backgroundColor: passouNutricionista === true ? t.accentGreen : t.inputBg, borderColor: t.cardBorder }]}
+                      style={[
+                        styles.toggleBtn,
+                        {
+                          backgroundColor: passouNutricionista === true ? t.glassButtonBg : t.inputBg,
+                          borderColor: passouNutricionista === true ? t.glassButtonBorder : t.cardBorder,
+                        },
+                      ]}
                       onPress={() => setPassouNutricionista(true)}
                     >
-                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === true ? '#ffffff' : t.textPrimary }]}>Sim, já fui</Text>
+                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === true ? t.glassButtonText : t.textPrimary }]}>Sim, já fui</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.toggleBtn, { backgroundColor: passouNutricionista === false ? t.accentGreen : t.inputBg, borderColor: t.cardBorder }]}
+                      style={[
+                        styles.toggleBtn,
+                        {
+                          backgroundColor: passouNutricionista === false ? t.glassButtonBg : t.inputBg,
+                          borderColor: passouNutricionista === false ? t.glassButtonBorder : t.cardBorder,
+                        },
+                      ]}
                       onPress={() => setPassouNutricionista(false)}
                     >
-                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === false ? '#ffffff' : t.textPrimary }]}>Não, nunca fui</Text>
+                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === false ? t.glassButtonText : t.textPrimary }]}>Não, nunca fui</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -749,8 +814,18 @@ export default function App() {
                     ))}
                   </View>
 
-                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: t.accentGreen }]} onPress={handleSubmeterAnamnese}>
-                    <Text style={styles.primaryButtonText}>Analisar com IA Multimodal ➔</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      {
+                        backgroundColor: t.glassButtonBg,
+                        borderColor: t.glassButtonBorder,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    onPress={handleSubmeterAnamnese}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Analisar com IA Multimodal ➔</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -760,8 +835,8 @@ export default function App() {
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
                   <Text style={[styles.cardTitle, { color: t.textPrimary }]}>📊 Diagnóstico Visual da IA</Text>
 
-                  <View style={[styles.highlightBadge, { backgroundColor: t.accentGreen }]}>
-                    <Text style={styles.highlightText}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
+                  <View style={[styles.highlightBadge, { backgroundColor: t.glassButtonBg, borderColor: t.glassButtonBorder, borderWidth: 1 }]}>
+                    <Text style={[styles.highlightText, { color: t.glassButtonText }]}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
                   </View>
 
                   <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>💪 Pontos Fortes:</Text>
@@ -780,8 +855,18 @@ export default function App() {
                   <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>💬 Mensagem da IA:</Text>
                   <Text style={[styles.bodyText, { color: t.textSecondary }]}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
 
-                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: t.accentGreen }]} onPress={handleConfirmarEGerarTreino}>
-                    <Text style={styles.primaryButtonText}>Concordo 100% / Gerar Treino ⚡</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      {
+                        backgroundColor: t.glassButtonBg,
+                        borderColor: t.glassButtonBorder,
+                        borderWidth: 1,
+                      },
+                    ]}
+                    onPress={handleConfirmarEGerarTreino}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Concordo 100% / Gerar Treino ⚡</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -806,11 +891,19 @@ export default function App() {
                             key={idx}
                             style={[
                               styles.dayChip,
-                              { backgroundColor: isSelected ? t.accentGreen : t.inputBg, borderColor: t.cardBorder },
+                              {
+                                backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
+                                borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
+                              },
                             ]}
                             onPress={() => setSessaoAtivaIndex(idx)}
                           >
-                            <Text style={[styles.dayChipText, { color: isSelected ? '#ffffff' : t.textSecondary }]}>
+                            <Text
+                              style={[
+                                styles.dayChipText,
+                                { color: isSelected ? t.glassButtonText : t.textSecondary },
+                              ]}
+                            >
                               Treino {letraDia}
                             </Text>
                           </TouchableOpacity>
@@ -831,10 +924,17 @@ export default function App() {
                           <View style={styles.exerciseHeader}>
                             <Text style={[styles.exerciseName, { color: t.textPrimary }]}>{eIdx + 1}. {ex.nome}</Text>
                             <TouchableOpacity
-                              style={[styles.replaceBtn, { backgroundColor: t.accentGreen }]}
+                              style={[
+                                styles.replaceBtn,
+                                {
+                                  backgroundColor: t.glassButtonBg,
+                                  borderColor: t.glassButtonBorder,
+                                  borderWidth: 1,
+                                },
+                              ]}
                               onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex)}
                             >
-                              <Text style={styles.replaceBtnText}>🔄 Trocar</Text>
+                              <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>🔄 Trocar</Text>
                             </TouchableOpacity>
                           </View>
 
@@ -892,7 +992,7 @@ export default function App() {
                 🏋️ MyPersonal
               </Text>
               <Text style={{ fontSize: 12, color: t.accentGreen, fontWeight: 'bold', marginTop: 2 }}>
-                Samsung One UI 8.5 Edition
+                Samsung One UI 8.5 • Liquid Glass
               </Text>
               <Text style={{ fontSize: 13, color: t.textSecondary, marginTop: 10 }}>
                 {nome || session?.user?.email}
@@ -910,12 +1010,14 @@ export default function App() {
                   flex: 1,
                   paddingVertical: 12,
                   borderRadius: 16,
-                  backgroundColor: temaAtual === 'light' ? t.accentGreen : t.inputBg,
+                  backgroundColor: temaAtual === 'light' ? t.glassButtonBg : t.inputBg,
+                  borderColor: temaAtual === 'light' ? t.glassButtonBorder : t.inputBorder,
+                  borderWidth: 1,
                   alignItems: 'center',
                 }}
                 onPress={() => setTemaAtual('light')}
               >
-                <Text style={{ fontWeight: 'bold', color: temaAtual === 'light' ? '#fff' : t.textSecondary }}>
+                <Text style={{ fontWeight: 'bold', color: temaAtual === 'light' ? t.glassButtonText : t.textSecondary }}>
                   ☀️ Claro
                 </Text>
               </TouchableOpacity>
@@ -925,20 +1027,22 @@ export default function App() {
                   flex: 1,
                   paddingVertical: 12,
                   borderRadius: 16,
-                  backgroundColor: temaAtual === 'dark' ? t.accentGreen : t.inputBg,
+                  backgroundColor: temaAtual === 'dark' ? t.glassButtonBg : t.inputBg,
+                  borderColor: temaAtual === 'dark' ? t.glassButtonBorder : t.inputBorder,
+                  borderWidth: 1,
                   alignItems: 'center',
                 }}
                 onPress={() => setTemaAtual('dark')}
               >
-                <Text style={{ fontWeight: 'bold', color: temaAtual === 'dark' ? '#fff' : t.textSecondary }}>
+                <Text style={{ fontWeight: 'bold', color: temaAtual === 'dark' ? t.glassButtonText : t.textSecondary }}>
                   🌙 Escuro
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* SEÇÃO NAVEGAÇÃO */}
+            {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
             <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              📌 NAVEGAÇÃO
+              📌 NAVEGAÇÃO PRINCIPAL
             </Text>
 
             <TouchableOpacity
@@ -946,7 +1050,9 @@ export default function App() {
                 paddingVertical: 14,
                 paddingHorizontal: 16,
                 borderRadius: 16,
-                backgroundColor: abaPrincipal === 'novo' ? t.inputBg : 'transparent',
+                backgroundColor: abaPrincipal === 'novo' ? t.glassButtonBg : t.inputBg,
+                borderColor: abaPrincipal === 'novo' ? t.glassButtonBorder : 'transparent',
+                borderWidth: 1,
                 marginBottom: 8,
               }}
               onPress={() => {
@@ -954,7 +1060,7 @@ export default function App() {
                 setMenuLateralVisivel(false);
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: t.textPrimary }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'novo' ? t.glassButtonText : t.textPrimary }}>
                 🏋️ Gerar Novo Treino
               </Text>
             </TouchableOpacity>
@@ -964,7 +1070,9 @@ export default function App() {
                 paddingVertical: 14,
                 paddingHorizontal: 16,
                 borderRadius: 16,
-                backgroundColor: abaPrincipal === 'historico' ? t.inputBg : 'transparent',
+                backgroundColor: abaPrincipal === 'historico' ? t.glassButtonBg : t.inputBg,
+                borderColor: abaPrincipal === 'historico' ? t.glassButtonBorder : 'transparent',
+                borderWidth: 1,
                 marginBottom: 20,
               }}
               onPress={() => {
@@ -972,7 +1080,7 @@ export default function App() {
                 setMenuLateralVisivel(false);
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: t.textPrimary }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'historico' ? t.glassButtonText : t.textPrimary }}>
                 💪 Meu Treino Ativo
               </Text>
             </TouchableOpacity>
@@ -1034,8 +1142,18 @@ export default function App() {
                   <Text style={styles.modalBtnText}>Cancelar</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.modalBtn, { backgroundColor: t.accentGreen }]} onPress={handleExecutarSubstituicao}>
-                  <Text style={styles.modalBtnText}>Trocar Exercício 🔄</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtn,
+                    {
+                      backgroundColor: t.glassButtonBg,
+                      borderColor: t.glassButtonBorder,
+                      borderWidth: 1,
+                    },
+                  ]}
+                  onPress={handleExecutarSubstituicao}
+                >
+                  <Text style={[styles.modalBtnText, { color: t.glassButtonText }]}>Trocar Exercício 🔄</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1046,18 +1164,15 @@ export default function App() {
   );
 }
 
-// ESTILOS VISUAIS E CÁPSULAS SAMSUNG ONE UI 8.5
+// ESTILOS VISUAIS E CÁPSULAS SAMSUNG ONE UI 8.5 LIQUID GLASS
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { padding: 16, borderBottomWidth: 1 },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
   headerUserText: { fontSize: 13, fontWeight: '600' },
   headerSubtitle: { fontSize: 12, marginTop: 4 },
-  menuBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
+  menuBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14 },
   menuBtnText: { fontSize: 13, fontWeight: 'bold' },
-  mainNavContainer: { flexDirection: 'row', borderRadius: 16, padding: 4, marginTop: 12 },
-  mainNavTab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 12 },
-  mainNavTabText: { fontSize: 13, fontWeight: 'bold' },
   dayChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, borderWidth: 1 },
   dayChipText: { fontSize: 13, fontWeight: 'bold' },
   scrollContent: { padding: 16 },
@@ -1088,9 +1203,9 @@ const styles = StyleSheet.create({
   photoBoxText: { fontSize: 11, textAlign: 'center' },
   photoPreview: { width: '100%', height: '100%', borderRadius: 16 },
   primaryButton: { padding: 16, borderRadius: 18, alignItems: 'center', marginTop: 15 },
-  primaryButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 15 },
+  primaryButtonText: { fontWeight: 'bold', fontSize: 15 },
   highlightBadge: { padding: 12, borderRadius: 16, marginBottom: 15, alignItems: 'center' },
-  highlightText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
+  highlightText: { fontWeight: 'bold', fontSize: 16 },
   sectionHeader: { fontWeight: 'bold', marginTop: 12, marginBottom: 4 },
   listItem: { fontSize: 14, marginLeft: 6, marginBottom: 2 },
   bodyText: { fontSize: 13, lineHeight: 18 },
@@ -1100,7 +1215,7 @@ const styles = StyleSheet.create({
   exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   exerciseName: { fontWeight: 'bold', fontSize: 15, flex: 1 },
   replaceBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  replaceBtnText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
+  replaceBtnText: { fontSize: 12, fontWeight: 'bold' },
   metricPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   metricPillText: { fontSize: 11 },
   exerciseCadence: { fontSize: 11, marginTop: 8, fontStyle: 'italic' },
@@ -1110,5 +1225,5 @@ const styles = StyleSheet.create({
   modalSubTitle: { fontSize: 14, marginBottom: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 15 },
   modalBtn: { flex: 1, padding: 12, borderRadius: 14, alignItems: 'center' },
-  modalBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 14 },
+  modalBtnText: { fontWeight: 'bold', fontSize: 14 },
 });
