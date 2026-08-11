@@ -476,7 +476,9 @@ export default function App() {
       setResultadoAvaliacao(avaliacao);
       setFaseAtual(2);
     } catch (err: any) {
-      Alert.alert('Erro na Análise', err.message || 'Falha ao conectar com o servidor.');
+      const msg = err.message || 'Falha ao conectar com o servidor.';
+      setMensagemErroAlerta(`Erro na Análise: ${msg}`);
+      setAlertaErroVisivel(true);
     } finally {
       setCarregando(false);
     }
@@ -512,7 +514,9 @@ export default function App() {
       setFaseAtual(3);
       setSessaoAtivaIndex(0);
     } catch (err: any) {
-      Alert.alert('Erro ao Prescrever Treino', err.message || 'Falha ao gerar treino.');
+      const msg = err.message || 'Falha ao gerar treino.';
+      setMensagemErroAlerta(`Erro ao Prescrever Treino: ${msg}`);
+      setAlertaErroVisivel(true);
     } finally {
       setCarregando(false);
     }
