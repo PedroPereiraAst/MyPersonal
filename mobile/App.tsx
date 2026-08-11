@@ -395,6 +395,27 @@ export default function App() {
     }
   };
 
+  // Função para Preencher Dados de Teste Rápido (Modo Dev/Admin)
+  const handlePreencherDadosDemo = () => {
+    setNome((prev) => prev || 'Pedro Pereira');
+    setIdade('24');
+    setPeso('78');
+    setAltura('178');
+    setObjetivo('Hipertrofia');
+    setNivel('Intermediário');
+    setDias('4');
+    setPassouNutricionista(false);
+    setObservacoes('Foco em hipertrofia de peitoral e ombros.');
+    setFotos({
+      frente: {
+        uri: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=400&q=80',
+        mimeType: 'image/jpeg',
+        base64Data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        tipo: 'frente',
+      },
+    });
+  };
+
   // Submeter Fase 1 (Anamnese + Fotos -> Backend Fastify -> Gemini)
   const handleSubmeterAnamnese = async () => {
     if (!nome || !idade || !peso || !altura) {
@@ -1015,7 +1036,22 @@ export default function App() {
               {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS */}
               {faseAtual === 1 && (
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Dados Biométricos</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Dados Biométricos</Text>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: t.glassButtonBg,
+                        borderColor: t.glassButtonBorder,
+                        borderWidth: 1,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                      }}
+                      onPress={handlePreencherDadosDemo}
+                    >
+                      <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Preencher Teste Rápido</Text>
+                    </TouchableOpacity>
+                  </View>
 
                   <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
                   <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor={t.textSecondary} />
@@ -1388,6 +1424,34 @@ export default function App() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* SEÇÃO MODO DEV / TESTE RÁPIDO */}
+            <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
+              MODO DEV / ATALHOS DE TESTE
+            </Text>
+
+            <TouchableOpacity
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 16,
+                backgroundColor: t.glassButtonBg,
+                borderColor: t.glassButtonBorder,
+                borderWidth: 1,
+                marginBottom: 20,
+                alignItems: 'center',
+              }}
+              onPress={() => {
+                handlePreencherDadosDemo();
+                setAbaPrincipal('novo');
+                setFaseAtual(1);
+                setMenuLateralVisivel(false);
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.glassButtonText }}>
+                Preencher Teste Rápido
+              </Text>
+            </TouchableOpacity>
 
             {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
             <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
