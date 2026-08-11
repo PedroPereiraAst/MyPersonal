@@ -449,8 +449,8 @@ export default function App() {
 
     const fotosArray = Object.values(fotos).filter((f): f is ImagemFoto => f !== undefined);
 
-    if (fotosArray.length < 3) {
-      setMensagemErroAlerta('Existem dados essenciais incompletos. É obrigatório incluir as 3 fotos corporais (Frente, Costas e Perfil) para que a IA processe sua avaliação.');
+    if (fotosArray.length === 0) {
+      setMensagemErroAlerta('Existem dados essenciais incompletos. É necessário incluir ao menos 1 foto corporal para que a IA processe sua avaliação.');
       setAlertaErroVisivel(true);
       return;
     }
