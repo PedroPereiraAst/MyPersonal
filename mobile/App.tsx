@@ -222,8 +222,10 @@ export default function App() {
     setCarregandoHistorico(true);
     try {
       const treino = await buscarTreinoAtivo(session.user.id);
-      setTreinoAtivoSalvo(treino);
-      setSessaoAtivaIndex(0);
+      if (treino) {
+        setTreinoAtivoSalvo(treino);
+        setSessaoAtivaIndex(0);
+      }
     } catch (err: any) {
       console.warn('Alerta ao buscar treino ativo:', err.message);
     } finally {
@@ -529,21 +531,32 @@ export default function App() {
 
     setCarregando(true);
     try {
-      // 1. Atualiza o estado do treino ativo localmente
-      setTreinoAtivoSalvo({
+      const treinoObj = {
         treino_json: resultadoTreino,
         created_at: new Date().toISOString(),
-      });
+      };
 
-      // 2. Persiste no Supabase PostgreSQL via API se houver usuário
+      // 1. Persiste no Supabase PostgreSQL via API se houver usuário
+      let treinoSalvoApi = null;
       if (session?.user?.id) {
-        await definirTreinoAtivoApi(
+        const resp = await definirTreinoAtivoApi(
           resultadoTreino,
           session.user.id,
           resultadoAvaliacao?.persistencia?.alunoId,
           resultadoAvaliacao?.persistencia?.avaliacaoId
-        ).catch((err) => console.warn('Alerta ao persistir no Supabase:', err.message));
+        ).catch((err) => {
+          console.warn('Alerta ao persistir no Supabase:', err.message);
+          return null;
+        });
+
+        if (resp?.treinoSalvo) {
+          treinoSalvoApi = resp.treinoSalvo;
+        }
       }
+
+      // 2. Atualiza o estado do treino ativo localmente
+      setTreinoAtivoSalvo(treinoSalvoApi || treinoObj);
+      setSessaoAtivaIndex(0);
 
       // 3. Redireciona e notifica o usuário
       setAbaPrincipal('historico');

@@ -173,19 +173,49 @@ export class SupabaseService {
   /**
    * Salvar Treino Prescrito no PostgreSQL do Supabase
    */
-  static async salvarTreino(treino: any, avaliacaoId?: string, alunoId?: string) {
+  static async salvarTreino(treino: any, avaliacaoId?: string, alunoId?: string, userId?: string) {
     try {
       const client = getSupabaseClient();
       if (!client) return null;
+
+      let targetAlunoId = alunoId;
+
+      if (!targetAlunoId && userId) {
+        const { data: alunoExistente } = await client
+          .from('alunos')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (alunoExistente) {
+          targetAlunoId = alunoExistente.id;
+        } else {
+          const { data: novoAluno } = await client
+            .from('alunos')
+            .insert({
+              user_id: userId,
+              nome: treino?.treino?.divisao_nome || 'Aluno',
+            })
+            .select('id')
+            .single();
+
+          if (novoAluno) {
+            targetAlunoId = novoAluno.id;
+          }
+        }
+      }
+
+      const divisaoNome = treino?.treino?.divisao_nome || treino?.divisao_nome || 'Ficha Prescrita';
+      const frequenciaSemanal = treino?.treino?.frequencia_semanal || treino?.frequencia_semanal || 4;
 
       const { data, error } = await client
         .from('treinos')
         .insert({
           avaliacao_id: avaliacaoId || null,
-          aluno_id: alunoId || null,
-          divisao_nome: treino.treino.divisao_nome,
-          frequencia_semanal: treino.treino.frequencia_semanal,
-          treino_json: treino,
+          aluno_id: targetAlunoId || null,
+          divisao_nome: divisaoNome,
+          frequencia_semanal: frequenciaSemanal,
+          treino_json: treino.treino ? treino : { treino },
         })
         .select()
         .single();

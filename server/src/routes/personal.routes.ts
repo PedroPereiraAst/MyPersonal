@@ -225,7 +225,8 @@ export async function personalRoutes(fastify: FastifyInstance) {
       const resultado = await SupabaseService.salvarTreino(
         treino,
         avaliacaoId,
-        alunoId || targetUserId
+        alunoId,
+        targetUserId
       );
 
       return reply.status(200).send({ ok: true, treinoSalvo: resultado });
