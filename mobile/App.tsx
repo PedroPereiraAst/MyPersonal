@@ -24,6 +24,7 @@ import {
   buscarTreinoAtivo,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
+import { exportarFichaTreinoPDF } from './src/services/pdfExporter';
 
 // PROVEDOR DE TEMA SAMSUNG ONE UI 8.5 COM EFEITO LIQUID GLASS TRANSLÚCIDO
 const THEMES = {
@@ -871,9 +872,26 @@ export default function App() {
           <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Ficha de Treino Ativa</Text>
-              <TouchableOpacity onPress={carregarTreinoAtivo}>
-                <Text style={{ color: t.accentGreen, fontSize: 13, fontWeight: 'bold' }}>Atualizar</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {treinoAtivoSalvo && (
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: t.glassButtonBg,
+                      borderColor: t.glassButtonBorder,
+                      borderWidth: 1,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                    }}
+                    onPress={() => exportarFichaTreinoPDF(treinoAtivoSalvo.treino_json, nome || session?.user?.email)}
+                  >
+                    <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Exportar PDF</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={carregarTreinoAtivo}>
+                  <Text style={{ color: t.accentGreen, fontSize: 13, fontWeight: 'bold' }}>Atualizar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {carregandoHistorico ? (
@@ -1193,7 +1211,22 @@ export default function App() {
               {/* FASE 3: FICHA DE TREINO PRESCRITA */}
               {faseAtual === 3 && resultadoTreino && (
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Ficha de Treino Prescrita</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Ficha de Treino Prescrita</Text>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: t.glassButtonBg,
+                        borderColor: t.glassButtonBorder,
+                        borderWidth: 1,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                      }}
+                      onPress={() => exportarFichaTreinoPDF(resultadoTreino, nome || session?.user?.email)}
+                    >
+                      <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Exportar PDF</Text>
+                    </TouchableOpacity>
+                  </View>
                   <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
                     Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana
                   </Text>
