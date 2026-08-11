@@ -113,6 +113,7 @@ export async function solicitarGeracaoTreino(
       anamnese,
       avaliacao,
       alunoId,
+      userId: alunoId,
       avaliacaoId,
     }),
   });
