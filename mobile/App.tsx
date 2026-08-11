@@ -151,6 +151,24 @@ export default function App() {
   const [motivoTroca, setMotivoTroca] = useState('');
   const [carregandoTroca, setCarregandoTroca] = useState(false);
 
+  // Estado para o Pop-up de Erro Vermelho de Dados Incompletos
+  const [alertaErroVisivel, setAlertaErroVisivel] = useState(false);
+  const [mensagemErroAlerta, setMensagemErroAlerta] = useState('');
+
+  // Verificação do Email do Usuário para Ativar o Modo Desenvolvedor / Admin
+  const DEV_ADMIN_EMAILS = [
+    'admin@mypersonal.com',
+    'dev@mypersonal.com',
+    'pedro@mypersonal.com',
+    'pedro.dev@mypersonal.com',
+  ];
+
+  const userEmail = session?.user?.email?.toLowerCase() || '';
+  const isDevUser =
+    DEV_ADMIN_EMAILS.includes(userEmail) ||
+    userEmail.includes('admin') ||
+    userEmail.includes('dev');
+
   // Lista de Objetivos e Níveis
   const listaObjetivos = ['Hipertrofia', 'Definição', 'Powerlifting', 'Endurance', 'Calistenia'];
   const listaNiveis = ['Iniciante', 'Intermediário', 'Avançado'];
@@ -397,6 +415,9 @@ export default function App() {
 
   // Função para Preencher Dados de Teste Rápido (Modo Dev/Admin)
   const handlePreencherDadosDemo = () => {
+    const FOTO_SAMPLE = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const SAMPLE_URI = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=400&q=80';
+
     setNome((prev) => prev || 'Pedro Pereira');
     setIdade('24');
     setPeso('78');
@@ -408,30 +429,39 @@ export default function App() {
     setObservacoes('Foco em hipertrofia de peitoral e ombros.');
     setFotos({
       frente: {
-        uri: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=400&q=80',
-        mimeType: 'image/jpeg',
-        base64Data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        uri: SAMPLE_URI,
+        mimeType: 'image/png',
+        base64Data: FOTO_SAMPLE,
         tipo: 'frente',
+      },
+      costas: {
+        uri: SAMPLE_URI,
+        mimeType: 'image/png',
+        base64Data: FOTO_SAMPLE,
+        tipo: 'costas',
+      },
+      perfil: {
+        uri: SAMPLE_URI,
+        mimeType: 'image/png',
+        base64Data: FOTO_SAMPLE,
+        tipo: 'perfil',
       },
     });
   };
 
   // Submeter Fase 1 (Anamnese + Fotos -> Backend Fastify -> Gemini)
   const handleSubmeterAnamnese = async () => {
-    if (!nome || !idade || !peso || !altura) {
-      Alert.alert('Campos Obrigatórios', 'Por favor, preencha Nome, Idade, Peso e Altura.');
-      return;
-    }
-
-    if (passouNutricionista === null) {
-      Alert.alert('Pergunta Obrigatória', 'Por favor, responda se você já passou por uma consulta com nutricionista.');
+    if (!nome || !idade || !peso || !altura || passouNutricionista === null) {
+      setMensagemErroAlerta('Existem dados essenciais incompletos. Por favor, preencha Nome, Idade, Peso, Altura e selecione a resposta sobre a consulta com nutricionista.');
+      setAlertaErroVisivel(true);
       return;
     }
 
     const fotosArray = Object.values(fotos).filter((f): f is ImagemFoto => f !== undefined);
 
-    if (fotosArray.length === 0) {
-      Alert.alert('Fotos Obrigatórias', 'Por favor, selecione ao menos 1 foto corporal (frente, costas ou perfil).');
+    if (fotosArray.length < 3) {
+      setMensagemErroAlerta('Existem dados essenciais incompletos. É obrigatório incluir as 3 fotos corporais (Frente, Costas e Perfil) para que a IA processe sua avaliação.');
+      setAlertaErroVisivel(true);
       return;
     }
 
@@ -1038,19 +1068,21 @@ export default function App() {
                 <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Dados Biométricos</Text>
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: t.glassButtonBg,
-                        borderColor: t.glassButtonBorder,
-                        borderWidth: 1,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 12,
-                      }}
-                      onPress={handlePreencherDadosDemo}
-                    >
-                      <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Preencher Teste Rápido</Text>
-                    </TouchableOpacity>
+                    {isDevUser && (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: t.glassButtonBg,
+                          borderColor: t.glassButtonBorder,
+                          borderWidth: 1,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                        }}
+                        onPress={handlePreencherDadosDemo}
+                      >
+                        <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Preencher Teste Rápido</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
@@ -1426,32 +1458,36 @@ export default function App() {
             </View>
 
             {/* SEÇÃO MODO DEV / TESTE RÁPIDO */}
-            <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              MODO DEV / ATALHOS DE TESTE
-            </Text>
+            {isDevUser && (
+              <>
+                <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
+                  MODO DEV / ATALHOS DE TESTE
+                </Text>
 
-            <TouchableOpacity
-              style={{
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderRadius: 16,
-                backgroundColor: t.glassButtonBg,
-                borderColor: t.glassButtonBorder,
-                borderWidth: 1,
-                marginBottom: 20,
-                alignItems: 'center',
-              }}
-              onPress={() => {
-                handlePreencherDadosDemo();
-                setAbaPrincipal('novo');
-                setFaseAtual(1);
-                setMenuLateralVisivel(false);
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.glassButtonText }}>
-                Preencher Teste Rápido
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 16,
+                    backgroundColor: t.glassButtonBg,
+                    borderColor: t.glassButtonBorder,
+                    borderWidth: 1,
+                    marginBottom: 20,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => {
+                    handlePreencherDadosDemo();
+                    setAbaPrincipal('novo');
+                    setFaseAtual(1);
+                    setMenuLateralVisivel(false);
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.glassButtonText }}>
+                    Preencher Teste Rápido
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
             <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
@@ -1590,6 +1626,40 @@ export default function App() {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL POP-UP VERMELHO DE ERRO PARA DADOS INCOMPLETOS */}
+      <Modal visible={alertaErroVisivel} transparent animationType="fade">
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(5, 9, 17, 0.88)' }]}>
+          <View
+            style={{
+              backgroundColor: '#1e1b4b',
+              borderColor: '#ef4444',
+              borderWidth: 2,
+              borderRadius: 22,
+              padding: 24,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ef4444', marginBottom: 10 }}>
+              Dados Essenciais Incompletos
+            </Text>
+            <Text style={{ fontSize: 14, color: '#f8fafc', textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
+              {mensagemErroAlerta}
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: '#ef4444',
+                paddingVertical: 12,
+                paddingHorizontal: 30,
+                borderRadius: 14,
+              }}
+              onPress={() => setAlertaErroVisivel(false)}
+            >
+              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 14 }}>Entendido</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
