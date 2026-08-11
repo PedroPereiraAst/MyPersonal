@@ -25,6 +25,7 @@ import {
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 import { exportarFichaTreinoPDF } from './src/services/pdfExporter';
+import { verificarPermissaoDev } from './src/config/devConfig';
 
 // PROVEDOR DE TEMA SAMSUNG ONE UI 8.5 COM EFEITO LIQUID GLASS TRANSLÚCIDO
 const THEMES = {
@@ -155,19 +156,8 @@ export default function App() {
   const [alertaErroVisivel, setAlertaErroVisivel] = useState(false);
   const [mensagemErroAlerta, setMensagemErroAlerta] = useState('');
 
-  // Verificação do Email do Usuário para Ativar o Modo Desenvolvedor / Admin
-  const DEV_ADMIN_EMAILS = [
-    'admin@mypersonal.com',
-    'dev@mypersonal.com',
-    'pedro@mypersonal.com',
-    'pedro.dev@mypersonal.com',
-  ];
-
-  const userEmail = session?.user?.email?.toLowerCase() || '';
-  const isDevUser =
-    DEV_ADMIN_EMAILS.includes(userEmail) ||
-    userEmail.includes('admin') ||
-    userEmail.includes('dev');
+  // Verificação de Permissão do Usuário via devConfig.ts
+  const isDevUser = verificarPermissaoDev(session?.user?.email);
 
   // Lista de Objetivos e Níveis
   const listaObjetivos = ['Hipertrofia', 'Definição', 'Powerlifting', 'Endurance', 'Calistenia'];
