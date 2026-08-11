@@ -1700,35 +1700,67 @@ export default function App() {
         </View>
       </Modal>
 
-      {/* MODAL POP-UP VERMELHO DE ERRO PARA DADOS INCOMPLETOS */}
+      {/* MODAL POP-UP VERMELHO DE ERRO (SAMSUNG ONE UI 8.5 LIQUID GLASS) */}
       <Modal visible={alertaErroVisivel} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(5, 9, 17, 0.88)' }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
           <View
             style={{
-              backgroundColor: '#1e1b4b',
+              backgroundColor: temaAtual === 'dark' ? 'rgba(38, 12, 18, 0.92)' : 'rgba(254, 242, 242, 0.96)',
               borderColor: '#ef4444',
               borderWidth: 2,
-              borderRadius: 22,
+              borderRadius: 26,
               padding: 24,
               alignItems: 'center',
+              shadowColor: '#ef4444',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.35,
+              shadowRadius: 16,
+              elevation: 10,
+              maxWidth: 440,
+              alignSelf: 'center',
+              width: '90%',
             }}
           >
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#ef4444', marginBottom: 10 }}>
+            {/* BADGE TRANSLÚCIDA DE ALERTA LIQUID GLASS */}
+            <View
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.20)',
+                borderColor: 'rgba(239, 68, 68, 0.55)',
+                borderWidth: 1,
+                paddingHorizontal: 14,
+                paddingVertical: 5,
+                borderRadius: 12,
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#ef4444', letterSpacing: 0.8 }}>
+                ATENÇÃO DE PREENCHIMENTO
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: temaAtual === 'dark' ? '#ff6b6b' : '#dc2626', marginBottom: 10, textAlign: 'center' }}>
               Dados Essenciais Incompletos
             </Text>
-            <Text style={{ fontSize: 14, color: '#f8fafc', textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
+
+            <Text style={{ fontSize: 13.5, color: temaAtual === 'dark' ? '#cbd5e1' : '#475569', textAlign: 'center', lineHeight: 21, marginBottom: 22 }}>
               {mensagemErroAlerta}
             </Text>
+
+            {/* BOTÃO LIQUID GLASS RED */}
             <TouchableOpacity
               style={{
-                backgroundColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.22)',
+                borderColor: 'rgba(239, 68, 68, 0.65)',
+                borderWidth: 1.5,
                 paddingVertical: 12,
-                paddingHorizontal: 30,
-                borderRadius: 14,
+                paddingHorizontal: 40,
+                borderRadius: 16,
               }}
               onPress={() => setAlertaErroVisivel(false)}
             >
-              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 14 }}>Entendido</Text>
+              <Text style={{ color: temaAtual === 'dark' ? '#ff6b6b' : '#dc2626', fontWeight: 'bold', fontSize: 14 }}>
+                Entendido
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
