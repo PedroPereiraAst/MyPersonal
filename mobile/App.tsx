@@ -558,7 +558,14 @@ export default function App() {
       setTreinoAtivoSalvo(treinoSalvoApi || treinoObj);
       setSessaoAtivaIndex(0);
 
-      // 3. Redireciona e notifica o usuário
+      // 3. Limpa o fluxo de anamnese para reiniciar na Fase 1 inicial
+      setFaseAtual(1);
+      setResultadoAvaliacao(null);
+      setResultadoTreino(null);
+      setFotos({});
+      setObservacoes('');
+
+      // 4. Redireciona e notifica o usuário
       setAbaPrincipal('historico');
       Alert.alert(
         'Treino Definido com Sucesso!',
