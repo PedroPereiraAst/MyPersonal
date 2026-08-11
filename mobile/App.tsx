@@ -22,6 +22,7 @@ import {
   executarCadastroApi,
   executarLoginApi,
   buscarTreinoAtivo,
+  definirTreinoAtivoApi,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 import { exportarFichaTreinoPDF } from './src/services/pdfExporter';
@@ -516,6 +517,43 @@ export default function App() {
     } catch (err: any) {
       const msg = err.message || 'Falha ao gerar treino.';
       setMensagemErroAlerta(`Erro ao Prescrever Treino: ${msg}`);
+      setAlertaErroVisivel(true);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // Função para Definir a Ficha Prescrita como Treino Ativo do Usuário
+  const handleDefinirTreinoAtivo = async () => {
+    if (!resultadoTreino) return;
+
+    setCarregando(true);
+    try {
+      // 1. Atualiza o estado do treino ativo localmente
+      setTreinoAtivoSalvo({
+        treino_json: resultadoTreino,
+        created_at: new Date().toISOString(),
+      });
+
+      // 2. Persiste no Supabase PostgreSQL via API se houver usuário
+      if (session?.user?.id) {
+        await definirTreinoAtivoApi(
+          resultadoTreino,
+          session.user.id,
+          resultadoAvaliacao?.persistencia?.alunoId,
+          resultadoAvaliacao?.persistencia?.avaliacaoId
+        ).catch((err) => console.warn('Alerta ao persistir no Supabase:', err.message));
+      }
+
+      // 3. Redireciona e notifica o usuário
+      setAbaPrincipal('historico');
+      Alert.alert(
+        'Treino Definido com Sucesso!',
+        'Sua nova ficha de treino foi gravada como seu Treino Ativo principal! Você já pode acompanhar suas sessões e iniciar seus treinos.'
+      );
+    } catch (err: any) {
+      const msg = err.message || 'Falha ao definir treino ativo.';
+      setMensagemErroAlerta(`Erro: ${msg}`);
       setAlertaErroVisivel(true);
     } finally {
       setCarregando(false);
@@ -1292,6 +1330,24 @@ export default function App() {
                   <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
                     Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana
                   </Text>
+
+                  {/* BOTAO PRINCIPAL DE DEFINIR COMO TREINO ATIVO */}
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      {
+                        backgroundColor: t.glassButtonBg,
+                        borderColor: t.glassButtonBorder,
+                        borderWidth: 1.5,
+                        marginVertical: 12,
+                      },
+                    ]}
+                    onPress={handleDefinirTreinoAtivo}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText, fontSize: 16 }]}>
+                      Definir como Meu Treino Ativo
+                    </Text>
+                  </TouchableOpacity>
 
                   {/* NAVEGAÇÃO DE DIAS DE TREINO (TREINO A, TREINO B, TREINO C...) */}
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 14 }}>

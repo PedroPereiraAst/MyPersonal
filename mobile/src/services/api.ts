@@ -153,3 +153,29 @@ export async function solicitarSubstituicaoExercicio(
 
   return response.json();
 }
+
+export async function definirTreinoAtivoApi(
+  treino: any,
+  userId?: string,
+  alunoId?: string,
+  avaliacaoId?: string
+): Promise<any> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/definir-treino-ativo`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      treino,
+      userId,
+      alunoId,
+      avaliacaoId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao definir treino ativo.');
+  }
+
+  return response.json();
+}

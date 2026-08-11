@@ -204,4 +204,34 @@ export async function personalRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  /**
+   * ROTA PROTEGIDA 4: Definir Treino Prescrito como Treino Ativo do Usuário
+   * POST /api/definir-treino-ativo
+   */
+  fastify.post<{
+    Body: {
+      treino: any;
+      userId?: string;
+      alunoId?: string;
+      avaliacaoId?: string;
+    };
+  }>('/definir-treino-ativo', { preHandler: autenticarUsuario }, async (request, reply) => {
+    try {
+      const { treino, userId, alunoId, avaliacaoId } = request.body;
+      const authenticatedUser = (request as any).user;
+      const targetUserId = userId || authenticatedUser?.id;
+
+      const resultado = await SupabaseService.salvarTreino(
+        treino,
+        avaliacaoId,
+        alunoId || targetUserId
+      );
+
+      return reply.status(200).send({ ok: true, treinoSalvo: resultado });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Erro ao salvar treino ativo.' });
+    }
+  });
 }
