@@ -1053,7 +1053,9 @@ export default function App() {
                     {/* SESSÃO DE TREINO SELECIONADA */}
                     {sessaoAtual && (
                       <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]}>
-                        <Text style={[styles.sessionTitle, { color: t.accentGreen }]}>{sessaoAtual.nome}</Text>
+                        <Text style={[styles.sessionTitle, { color: t.accentGreen }]}>
+                          Dia {sessaoAtivaIndex + 1} - {String(sessaoAtual.nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
+                        </Text>
 
                         {sessaoAtual.exercicios?.map((ex: any, eIdx: number) => (
                           <View key={eIdx} style={[styles.exerciseCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
@@ -1404,7 +1406,7 @@ export default function App() {
                   {resultadoTreino.treino.sessoes[sessaoAtivaIndex] && (
                     <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]}>
                       <Text style={[styles.sessionTitle, { color: t.accentGreen }]}>
-                        {resultadoTreino.treino.sessoes[sessaoAtivaIndex].nome}
+                        Dia {sessaoAtivaIndex + 1} - {String(resultadoTreino.treino.sessoes[sessaoAtivaIndex].nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
                       </Text>
 
                       {resultadoTreino.treino.sessoes[sessaoAtivaIndex].exercicios.map((ex, eIdx) => (

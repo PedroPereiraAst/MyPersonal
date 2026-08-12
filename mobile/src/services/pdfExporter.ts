@@ -6,7 +6,10 @@ export async function exportarFichaTreinoPDF(treinoData: any, nomeAluno: string)
 
   const htmlSessoes = sessoes
     .map((sessao: any, idx: number) => {
-      const letra = String.fromCharCode(65 + idx);
+      const numDia = idx + 1;
+      const nomeSessaoLimpo = String(sessao.nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '');
+      const tituloSessao = `Dia ${numDia}${nomeSessaoLimpo ? ` - ${nomeSessaoLimpo}` : ''}`;
+
       const exerciciosHtml = (sessao.exercicios || [])
         .map(
           (ex: any, eIdx: number) => `
@@ -25,7 +28,7 @@ export async function exportarFichaTreinoPDF(treinoData: any, nomeAluno: string)
       return `
         <div style="margin-bottom: 24px; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; background: #ffffff;">
           <div style="background-color: #0f172a; color: #00e676; padding: 12px 16px; font-size: 16px; font-weight: bold;">
-            Treino ${letra} - ${sessao.nome}
+            ${tituloSessao}
           </div>
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
             <thead>
@@ -76,7 +79,6 @@ export async function exportarFichaTreinoPDF(treinoData: any, nomeAluno: string)
   `;
 
   try {
-    // Tenta carregar os módulos nativos do Expo se disponíveis
     let PrintModule: any = null;
     let SharingModule: any = null;
 
@@ -99,7 +101,6 @@ export async function exportarFichaTreinoPDF(treinoData: any, nomeAluno: string)
       return;
     }
 
-    // Fallback limpo para Web / Navegador Browser
     if (typeof window !== 'undefined') {
       const printWindow = window.open('', '_blank');
       if (printWindow) {
