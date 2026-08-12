@@ -1022,7 +1022,6 @@ export default function App() {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         {sessoes.map((s: any, idx: number) => {
-                          const letraDia = String.fromCharCode(65 + idx);
                           const isSelected = sessaoAtivaIndex === idx;
 
                           return (
@@ -1043,7 +1042,7 @@ export default function App() {
                                   { color: isSelected ? t.glassButtonText : t.textSecondary },
                                 ]}
                               >
-                                Treino {letraDia}
+                                Dia {idx + 1}
                               </Text>
                             </TouchableOpacity>
                           );
@@ -1373,7 +1372,6 @@ export default function App() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 14 }}>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {resultadoTreino.treino.sessoes.map((s, idx) => {
-                        const letraDia = String.fromCharCode(65 + idx);
                         const isSelected = sessaoAtivaIndex === idx;
 
                         return (
@@ -1394,7 +1392,7 @@ export default function App() {
                                 { color: isSelected ? t.glassButtonText : t.textSecondary },
                               ]}
                             >
-                              Treino {letraDia}
+                              Dia {idx + 1}
                             </Text>
                           </TouchableOpacity>
                         );
