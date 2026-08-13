@@ -120,6 +120,7 @@ export default function App() {
   const [timestampFimDescanso, setTimestampFimDescanso] = useState<number | null>(null);
   const [descansoSegundosRestantes, setDescansoSegundosRestantes] = useState<number>(60);
   const [descansoAtivo, setDescansoAtivo] = useState(false);
+  const [exercicioDescansoAtivo, setExercicioDescansoAtivo] = useState<string | null>(null);
 
   // Estado do Formulário de Anamnese
   const [nome, setNome] = useState('');
@@ -198,15 +199,20 @@ export default function App() {
     );
   };
 
-  // Alternar Conclusão da Série e Sincronizar com a Nuvem
+  // Alternar Conclusão da Série, Iniciar Timer de Descanso e Sincronizar
   const handleAlternarConclusaoSerie = (
     exercicioNome: string,
     serieIndex: number,
     carga: string,
     reps: string,
-    concluido: boolean
+    concluido: boolean,
+    descansoSegundosPadrao?: number
   ) => {
     handleAtualizarCargaExercicio(exercicioNome, serieIndex, carga, reps, concluido);
+
+    if (concluido) {
+      handleIniciarDescansoExercicio(exercicioNome, descansoSegundosPadrao || 60);
+    }
 
     if (session?.user?.id && concluido) {
       registrarCargaApi(
@@ -340,12 +346,14 @@ export default function App() {
     }
   };
 
-  // Funções de Controle do Timer de Descanso
-  const handleIniciarDescanso = (segundos: number) => {
+  // Funções de Controle do Timer de Descanso por Exercício
+  const handleIniciarDescansoExercicio = (exercicioNome: string, segundos: number) => {
     const agora = Date.now();
-    setDescansoDuracaoSegundos(segundos);
-    setTimestampFimDescanso(agora + segundos * 1000);
-    setDescansoSegundosRestantes(segundos);
+    const duracao = segundos || 60;
+    setExercicioDescansoAtivo(exercicioNome);
+    setDescansoDuracaoSegundos(duracao);
+    setTimestampFimDescanso(agora + duracao * 1000);
+    setDescansoSegundosRestantes(duracao);
     setDescansoAtivo(true);
   };
 
@@ -358,6 +366,7 @@ export default function App() {
     setDescansoAtivo(false);
     setTimestampFimDescanso(null);
     setDescansoSegundosRestantes(descansoDuracaoSegundos);
+    setExercicioDescansoAtivo(null);
   };
 
   // Formatar Segundos em HH:MM:SS ou MM:SS
@@ -922,112 +931,6 @@ export default function App() {
               )}
             </View>
           </View>
-
-          {/* CARD 2: TIMER DE DESCANSO ENTRE SÉRIES */}
-          <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Timer de Descanso Entre Séries</Text>
-            <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 12 }}>
-              Selecione o tempo de pausa e ative a contagem regressiva:
-            </Text>
-
-            {/* PRESETS RÁPIDOS (30s, 1:00 min, 1:30 min) */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-              {[
-                { label: '30s', val: 30 },
-                { label: '1:00 min', val: 60 },
-                { label: '1:30 min', val: 90 },
-              ].map((p) => {
-                const isSelected = descansoDuracaoSegundos === p.val;
-                return (
-                  <TouchableOpacity
-                    key={p.val}
-                    style={[
-                      styles.dayChip,
-                      {
-                        flex: 1,
-                        alignItems: 'center',
-                        backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
-                        borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
-                      },
-                    ]}
-                    onPress={() => handleIniciarDescanso(p.val)}
-                  >
-                    <Text
-                      style={[
-                        styles.dayChipText,
-                        { color: isSelected ? t.glassButtonText : t.textSecondary },
-                      ]}
-                    >
-                      {p.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* RELÓGIO REGRESSIVO DIGITAL DO DESCANSO */}
-            <View
-              style={{
-                alignItems: 'center',
-                paddingVertical: 20,
-                backgroundColor: t.inputBg,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: t.cardBorder,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ fontSize: 40, fontWeight: 'bold', color: t.accentCyan, letterSpacing: 2 }}>
-                {formatarTempo(descansoSegundosRestantes)}
-              </Text>
-              <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
-                {descansoAtivo ? 'Descansando em segundo plano...' : 'Selecione uma opção acima para iniciar'}
-              </Text>
-            </View>
-
-            {/* BOTOES DE AÇÃO DO DESCANSO */}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {descansoAtivo ? (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
-                  ]}
-                  onPress={handlePausarDescanso}
-                >
-                  <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Pausar Descanso</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    {
-                      flex: 1,
-                      marginTop: 0,
-                      backgroundColor: t.glassButtonBg,
-                      borderColor: t.glassButtonBorder,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  onPress={() => handleIniciarDescanso(descansoDuracaoSegundos)}
-                >
-                  <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                    Iniciar Descanso
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  { flex: 1, marginTop: 0, backgroundColor: t.inputBg, borderColor: t.cardBorder, borderWidth: 1 },
-                ]}
-                onPress={handleResetarDescanso}
-              >
-                <Text style={[styles.primaryButtonText, { color: t.textSecondary }]}>Resetar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
       )}
 
@@ -1149,11 +1052,71 @@ export default function App() {
                               <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
                                 <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
                               </View>
-                              <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                                <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
-                              </View>
+                              <TouchableOpacity
+                                style={[
+                                  styles.metricPill,
+                                  {
+                                    backgroundColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBg : t.inputBg,
+                                    borderColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBorder : t.cardBorder,
+                                    borderWidth: 1,
+                                  },
+                                ]}
+                                onPress={() => handleIniciarDescansoExercicio(ex.nome, ex.descanso_segundos || 60)}
+                              >
+                                <Text style={[styles.metricPillText, { color: t.textSecondary }]}>
+                                  Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
+                                </Text>
+                              </TouchableOpacity>
                             </View>
                             <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
+
+                            {/* BARRA DO TIMER DE DESCANSO INTEGRADO DO EXERCÍCIO */}
+                            {descansoAtivo && exercicioDescansoAtivo === ex.nome && (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 10,
+                                  marginTop: 10,
+                                  backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                                  borderColor: 'rgba(2, 132, 199, 0.50)',
+                                  borderWidth: 1,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 12,
+                                }}
+                              >
+                                <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentCyan, flex: 1 }}>
+                                  Descansando: {formatarTempo(descansoSegundosRestantes)}
+                                </Text>
+                                <TouchableOpacity
+                                  style={{
+                                    backgroundColor: t.inputBg,
+                                    borderColor: t.cardBorder,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    borderRadius: 8,
+                                  }}
+                                  onPress={handlePausarDescanso}
+                                >
+                                  <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Pausar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={{
+                                    backgroundColor: t.inputBg,
+                                    borderColor: t.cardBorder,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    borderRadius: 8,
+                                  }}
+                                  onPress={handleResetarDescanso}
+                                >
+                                  <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Resetar</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )}
 
                             {/* PAINEL DE REGISTRO DE CARGAS SAMSUNG ONE UI 8.5 */}
                             <View
@@ -1254,7 +1217,7 @@ export default function App() {
                                         paddingVertical: 4,
                                         borderRadius: 6,
                                       }}
-                                      onPress={() => handleAlternarConclusaoSerie(ex.nome, sIdx, reg.carga, reg.reps, !reg.concluido)}
+                                      onPress={() => handleAlternarConclusaoSerie(ex.nome, sIdx, reg.carga, reg.reps, !reg.concluido, ex.descanso_segundos)}
                                     >
                                       <Text style={{ fontSize: 10, fontWeight: 'bold', color: reg.concluido ? t.accentGreen : t.textSecondary }}>
                                         {reg.concluido ? 'Concluída' : 'Check'}
@@ -1610,11 +1573,71 @@ export default function App() {
                             <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
                               <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
                             </View>
-                            <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text></Text>
-                            </View>
+                            <TouchableOpacity
+                              style={[
+                                styles.metricPill,
+                                {
+                                  backgroundColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBg : t.inputBg,
+                                  borderColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBorder : t.cardBorder,
+                                  borderWidth: 1,
+                                },
+                              ]}
+                              onPress={() => handleIniciarDescansoExercicio(ex.nome, ex.descanso_segundos || 60)}
+                            >
+                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>
+                                Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                           <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
+
+                          {/* BARRA DO TIMER DE DESCANSO INTEGRADO DO EXERCÍCIO */}
+                          {descansoAtivo && exercicioDescansoAtivo === ex.nome && (
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 10,
+                                marginTop: 10,
+                                backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                                borderColor: 'rgba(2, 132, 199, 0.50)',
+                                borderWidth: 1,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                borderRadius: 12,
+                              }}
+                            >
+                              <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentCyan, flex: 1 }}>
+                                Descansando: {formatarTempo(descansoSegundosRestantes)}
+                              </Text>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: t.inputBg,
+                                  borderColor: t.cardBorder,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                }}
+                                onPress={handlePausarDescanso}
+                              >
+                                <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Pausar</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{
+                                  backgroundColor: t.inputBg,
+                                  borderColor: t.cardBorder,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                }}
+                                onPress={handleResetarDescanso}
+                              >
+                                <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Resetar</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
                         </View>
                       ))}
                     </View>
