@@ -1815,7 +1815,7 @@ export default function App() {
               }}
             >
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'cronometro' ? t.glassButtonText : t.textPrimary }}>
-                Cronômetro & Descanso
+                Cronômetro De Treino
               </Text>
             </TouchableOpacity>
 
