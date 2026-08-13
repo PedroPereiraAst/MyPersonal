@@ -13,6 +13,7 @@ import {
   StatusBar,
   Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from './src/services/supabase';
 import {
@@ -23,6 +24,7 @@ import {
   executarLoginApi,
   buscarTreinoAtivo,
   definirTreinoAtivoApi,
+  registrarCargaApi,
 } from './src/services/api';
 import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from './src/types';
 import { exportarFichaTreinoPDF } from './src/services/pdfExporter';
@@ -156,6 +158,66 @@ export default function App() {
   // Estado para o Pop-up de Erro Vermelho de Dados Incompletos
   const [alertaErroVisivel, setAlertaErroVisivel] = useState(false);
   const [mensagemErroAlerta, setMensagemErroAlerta] = useState('');
+
+  // Estado para Registro de Cargas por Exercício (Sobrecarga Progressiva)
+  const [registrosCargas, setRegistrosCargas] = useState<
+    Record<string, { carga: string; reps: string; concluido: boolean }>
+  >({});
+
+  // Carregar cargas salvas no AsyncStorage ao abrir o app
+  useEffect(() => {
+    AsyncStorage.getItem('@my_personal_cargas')
+      .then((raw) => {
+        if (raw) {
+          try {
+            setRegistrosCargas(JSON.parse(raw));
+          } catch (e) {
+            console.warn('Erro ao parsear cargas salvas:', e);
+          }
+        }
+      })
+      .catch((err) => console.warn('Erro ao ler cargas salvas:', err));
+  }, []);
+
+  // Atualizar Carga e Repetições localmente e no AsyncStorage
+  const handleAtualizarCargaExercicio = (
+    exercicioNome: string,
+    serieIndex: number,
+    carga: string,
+    reps: string,
+    concluido: boolean
+  ) => {
+    const key = `${exercicioNome}_serie_${serieIndex}`;
+    const novoEstado = {
+      ...registrosCargas,
+      [key]: { carga, reps, concluido },
+    };
+    setRegistrosCargas(novoEstado);
+    AsyncStorage.setItem('@my_personal_cargas', JSON.stringify(novoEstado)).catch((err) =>
+      console.warn('Erro ao salvar carga no AsyncStorage:', err)
+    );
+  };
+
+  // Alternar Conclusão da Série e Sincronizar com a Nuvem
+  const handleAlternarConclusaoSerie = (
+    exercicioNome: string,
+    serieIndex: number,
+    carga: string,
+    reps: string,
+    concluido: boolean
+  ) => {
+    handleAtualizarCargaExercicio(exercicioNome, serieIndex, carga, reps, concluido);
+
+    if (session?.user?.id && concluido) {
+      registrarCargaApi(
+        session.user.id,
+        exercicioNome,
+        serieIndex,
+        Number(carga) || 0,
+        Number(reps) || 0
+      ).catch((err) => console.warn('Alerta ao sincronizar carga no servidor:', err.message));
+    }
+  };
 
   // Verificação de Permissão do Usuário via devConfig.ts
   const isDevUser = verificarPermissaoDev(session?.user?.email);
@@ -1092,6 +1154,116 @@ export default function App() {
                               </View>
                             </View>
                             <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
+
+                            {/* PAINEL DE REGISTRO DE CARGAS SAMSUNG ONE UI 8.5 */}
+                            <View
+                              style={{
+                                marginTop: 12,
+                                padding: 12,
+                                backgroundColor: t.inputBg,
+                                borderRadius: 14,
+                                borderWidth: 1,
+                                borderColor: t.cardBorder,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.accentGreen, letterSpacing: 0.5 }}>
+                                  REGISTRO DE CARGAS (KG) & REPETIÇÕES
+                                </Text>
+                                <Text style={{ fontSize: 11, color: t.textSecondary }}>
+                                  {ex.series_trabalho || 3} Séries
+                                </Text>
+                              </View>
+
+                              {Array.from({ length: Number(ex.series_trabalho) || 3 }).map((_, sIdx) => {
+                                const key = `${ex.nome}_serie_${sIdx}`;
+                                const reg = registrosCargas[key] || { carga: '', reps: '', concluido: false };
+
+                                return (
+                                  <View
+                                    key={sIdx}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      marginBottom: 6,
+                                      backgroundColor: reg.concluido ? t.glassButtonBg : t.card,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 6,
+                                      borderRadius: 10,
+                                      borderWidth: 1,
+                                      borderColor: reg.concluido ? t.glassButtonBorder : t.cardBorder,
+                                    }}
+                                  >
+                                    <Text style={{ width: 52, fontSize: 11, fontWeight: 'bold', color: t.textPrimary }}>
+                                      Série {sIdx + 1}:
+                                    </Text>
+
+                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                      <TextInput
+                                        style={{
+                                          flex: 1,
+                                          backgroundColor: t.inputBg,
+                                          borderColor: t.inputBorder,
+                                          borderWidth: 1,
+                                          borderRadius: 6,
+                                          paddingHorizontal: 6,
+                                          paddingVertical: 3,
+                                          color: t.textPrimary,
+                                          fontSize: 12,
+                                          textAlign: 'center',
+                                        }}
+                                        placeholder="kg"
+                                        placeholderTextColor={t.textSecondary}
+                                        keyboardType="numeric"
+                                        value={reg.carga}
+                                        onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, txt, reg.reps, reg.concluido)}
+                                      />
+                                      <Text style={{ fontSize: 10, color: t.textSecondary }}>kg</Text>
+                                    </View>
+
+                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                      <TextInput
+                                        style={{
+                                          flex: 1,
+                                          backgroundColor: t.inputBg,
+                                          borderColor: t.inputBorder,
+                                          borderWidth: 1,
+                                          borderRadius: 6,
+                                          paddingHorizontal: 6,
+                                          paddingVertical: 3,
+                                          color: t.textPrimary,
+                                          fontSize: 12,
+                                          textAlign: 'center',
+                                        }}
+                                        placeholder="reps"
+                                        placeholderTextColor={t.textSecondary}
+                                        keyboardType="numeric"
+                                        value={reg.reps}
+                                        onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, reg.carga, txt, reg.concluido)}
+                                      />
+                                      <Text style={{ fontSize: 10, color: t.textSecondary }}>reps</Text>
+                                    </View>
+
+                                    <TouchableOpacity
+                                      style={{
+                                        backgroundColor: reg.concluido ? t.glassButtonBg : t.inputBg,
+                                        borderColor: reg.concluido ? t.glassButtonBorder : t.cardBorder,
+                                        borderWidth: 1,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 4,
+                                        borderRadius: 6,
+                                      }}
+                                      onPress={() => handleAlternarConclusaoSerie(ex.nome, sIdx, reg.carga, reg.reps, !reg.concluido)}
+                                    >
+                                      <Text style={{ fontSize: 10, fontWeight: 'bold', color: reg.concluido ? t.accentGreen : t.textSecondary }}>
+                                        {reg.concluido ? 'Concluída' : 'Check'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                );
+                              })}
+                            </View>
                           </View>
                         ))}
                       </View>

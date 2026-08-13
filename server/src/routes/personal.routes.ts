@@ -235,4 +235,54 @@ export async function personalRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({ error: 'Erro ao salvar treino ativo.' });
     }
   });
+
+  /**
+   * ROTA PROTEGIDA 5: Registrar Carga e Repetições do Exercício
+   * POST /api/registrar-carga
+   */
+  fastify.post<{
+    Body: {
+      userId?: string;
+      exercicioNome: string;
+      serieIndex: number;
+      cargaKg: number;
+      reps: number;
+    };
+  }>('/registrar-carga', { preHandler: autenticarUsuario }, async (request, reply) => {
+    try {
+      const { userId, exercicioNome, serieIndex, cargaKg, reps } = request.body;
+      const authenticatedUser = (request as any).user;
+      const targetUserId = userId || authenticatedUser?.id || 'user_autenticado_app';
+
+      const resultado = await SupabaseService.salvarRegistroCarga(
+        targetUserId,
+        exercicioNome,
+        serieIndex,
+        cargaKg,
+        reps
+      );
+
+      return reply.status(200).send({ ok: true, registro: resultado });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Erro ao registrar carga.' });
+    }
+  });
+
+  /**
+   * ROTA PROTEGIDA 6: Obter Histórico de Cargas do Usuário
+   * GET /api/historico-cargas/:userId
+   */
+  fastify.get<{
+    Params: { userId: string };
+  }>('/historico-cargas/:userId', { preHandler: autenticarUsuario }, async (request, reply) => {
+    try {
+      const { userId } = request.params;
+      const cargas = await SupabaseService.buscarHistoricoCargas(userId);
+      return reply.status(200).send({ cargas });
+    } catch (error: any) {
+      fastify.log.error(error);
+      return reply.status(500).send({ cargas: [] });
+    }
+  });
 }

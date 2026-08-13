@@ -232,4 +232,54 @@ export class SupabaseService {
       return null;
     }
   }
+
+  /**
+   * Salvar ou Atualizar Registro de Carga de Exercício
+   */
+  static async salvarRegistroCarga(userId: string, exercicioNome: string, serieIndex: number, cargaKg: number, reps: number) {
+    try {
+      const client = getSupabaseClient();
+      if (!client) return null;
+
+      const { data, error } = await client
+        .from('historico_cargas')
+        .upsert({
+          user_id: userId,
+          exercicio_nome: exercicioNome,
+          serie_index: serieIndex,
+          carga_kg: cargaKg,
+          reps_realizadas: reps,
+          updated_at: new Date().toISOString(),
+        })
+        .select();
+
+      if (error) {
+        console.warn('⚠️ Alerta ao salvar carga no Supabase:', error.message);
+      }
+      return data;
+    } catch (err: any) {
+      console.warn('⚠️ Alerta ao salvar carga no Supabase:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Buscar Histórico de Cargas do Usuário
+   */
+  static async buscarHistoricoCargas(userId: string) {
+    try {
+      const client = getSupabaseClient();
+      if (!client) return [];
+
+      const { data, error } = await client
+        .from('historico_cargas')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data;
+    } catch {
+      return [];
+    }
+  }
 }

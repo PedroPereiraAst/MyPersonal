@@ -179,3 +179,31 @@ export async function definirTreinoAtivoApi(
 
   return response.json();
 }
+
+export async function registrarCargaApi(
+  userId: string,
+  exercicioNome: string,
+  serieIndex: number,
+  cargaKg: number,
+  reps: number
+): Promise<any> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/registrar-carga`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      userId,
+      exercicioNome,
+      serieIndex,
+      cargaKg,
+      reps,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Erro ao registrar carga.');
+  }
+
+  return response.json();
+}
