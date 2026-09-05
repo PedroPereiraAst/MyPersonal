@@ -17,10 +17,10 @@ function getAIClient() {
   return new GoogleGenAI({ apiKey });
 }
 
-// Função de resiliência total: Tenta os modelos preferidos e faz fallback automático se atingir cota (429) ou alta demanda (503)
+// Função de resiliência total: Tenta os modelos preferidos e faz fallback automático se atingir cota (429), indisponibilidade (404/503) ou alta demanda
 async function generateContentWithRetry(ai: any, params: any) {
-  const preferredModel = params.model || 'gemini-2.5-flash';
-  const fallbackModels = [preferredModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const preferredModel = params.model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+  const fallbackModels = [preferredModel, 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
   const modelsToTry = [...new Set(fallbackModels)].filter(Boolean);
 
   let lastError: any;
@@ -34,19 +34,24 @@ async function generateContentWithRetry(ai: any, params: any) {
       return response;
     } catch (err: any) {
       lastError = err;
-      const isQuotaOrHighDemand =
+      const isRecoverableError =
         err.status === 503 ||
         err.statusCode === 503 ||
         err.status === 429 ||
         err.statusCode === 429 ||
+        err.status === 404 ||
+        err.statusCode === 404 ||
         String(err.message).includes('429') ||
         String(err.message).includes('503') ||
+        String(err.message).includes('404') ||
         String(err.message).includes('quota') ||
         String(err.message).includes('high demand') ||
-        String(err.message).includes('RESOURCE_EXHAUSTED');
+        String(err.message).includes('RESOURCE_EXHAUSTED') ||
+        String(err.message).includes('no longer available') ||
+        String(err.message).includes('NOT_FOUND');
 
-      if (isQuotaOrHighDemand) {
-        console.warn(`⚠️ Modelo ${model} atingiu trava de cota (429/503). Chaveando para modelo alternativo...`);
+      if (isRecoverableError) {
+        console.warn(`⚠️ Modelo ${model} indisponível ou em cota. Chaveando para modelo alternativo...`);
         await new Promise((resolve) => setTimeout(resolve, 800));
         continue;
       }
@@ -123,7 +128,7 @@ Instruções para o Diagnóstico:
         },
       }));
 
-      const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
       const ai = getAIClient();
 
       const response = await generateContentWithRetry(ai, {
@@ -190,7 +195,7 @@ Instruções para a Prescrição:
 4. Para cada exercício, defina séries de aquecimento, séries de trabalho, faixa de repetições, RIR (Repetições de Reserva), tempo de descanso em segundos e foco biomecânico.
 `;
 
-      const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
       const ai = getAIClient();
 
       const response = await generateContentWithRetry(ai, {
@@ -292,7 +297,7 @@ Instruções para a Substituição:
 3. Forneça uma explicação biomecânica em 'motivo_escolha' justificando a substituição.
 `;
 
-      const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
       const ai = getAIClient();
 
       const response = await generateContentWithRetry(ai, {

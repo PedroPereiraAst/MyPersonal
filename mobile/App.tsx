@@ -30,62 +30,20 @@ import type { AnamneseFormData, ImagemFoto, AvaliacaoFisica, FichaTreino } from 
 import { exportarFichaTreinoPDF } from './src/services/pdfExporter';
 import { verificarPermissaoDev } from './src/config/devConfig';
 
-// PROVEDOR DE TEMA SAMSUNG ONE UI 8.5 COM EFEITO LIQUID GLASS TRANSLÚCIDO
-const THEMES = {
-  dark: {
-    bg: '#090d16',
-    card: 'rgba(22, 30, 49, 0.85)',
-    cardBorder: 'rgba(255, 255, 255, 0.12)',
-    textPrimary: '#f8fafc',
-    textSecondary: '#94a3b8',
-    inputBg: 'rgba(15, 23, 42, 0.75)',
-    inputBorder: 'rgba(255, 255, 255, 0.12)',
-    accentGreen: '#00e676',
-    accentGreenDark: '#00c853',
-    glassButtonBg: 'rgba(0, 230, 118, 0.20)',
-    glassButtonBorder: 'rgba(0, 230, 118, 0.45)',
-    glassButtonText: '#00e676',
-    accentCyan: '#00b0ff',
-    pillBg: 'rgba(15, 23, 42, 0.75)',
-    pillActiveBg: 'rgba(0, 230, 118, 0.25)',
-    pillActiveBorder: '#00e676',
-    pillActiveText: '#ffffff',
-    modalBg: '#161e31',
-    overlayBg: 'rgba(5, 9, 17, 0.85)',
-    headerBg: 'rgba(22, 30, 49, 0.92)',
-    drawerBg: '#111827',
-    statusBar: 'light-content' as const,
-  },
-  light: {
-    bg: '#f4f6f9',
-    card: 'rgba(255, 255, 255, 0.90)',
-    cardBorder: 'rgba(0, 0, 0, 0.08)',
-    textPrimary: '#0f172a',
-    textSecondary: '#64748b',
-    inputBg: 'rgba(248, 250, 252, 0.90)',
-    inputBorder: 'rgba(203, 213, 225, 0.8)',
-    accentGreen: '#00c853',
-    accentGreenDark: '#00a843',
-    glassButtonBg: 'rgba(0, 200, 83, 0.15)',
-    glassButtonBorder: 'rgba(0, 200, 83, 0.45)',
-    glassButtonText: '#00a843',
-    accentCyan: '#0284c7',
-    pillBg: 'rgba(226, 232, 240, 0.80)',
-    pillActiveBg: '#00c853',
-    pillActiveBorder: '#00c853',
-    pillActiveText: '#ffffff',
-    modalBg: '#ffffff',
-    overlayBg: 'rgba(15, 23, 42, 0.65)',
-    headerBg: 'rgba(255, 255, 255, 0.95)',
-    drawerBg: '#ffffff',
-    statusBar: 'dark-content' as const,
-  },
-};
+import { AERO_THEMES, type AeroThemeType } from './src/theme/aeroTheme';
+import {
+  AeroBubbleButton,
+  AeroGlassCard,
+  AeroBubbleChip,
+  AeroBadge,
+} from './src/components/AeroComponents';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Play, Pause, Square } from 'lucide-react-native';
 
 export default function App() {
-  // Estado do Tema (Modo Claro vs Modo Escuro)
+  // Estado do Tema Frutiger Aero (Aero Oceanic Dark vs Aero Sky Light)
   const [temaAtual, setTemaAtual] = useState<'dark' | 'light'>('dark');
-  const t = THEMES[temaAtual];
+  const t = AERO_THEMES[temaAtual];
 
   // Estado para controlar a exibição do Menu Lateral (Drawer Modal)
   const [menuLateralVisivel, setMenuLateralVisivel] = useState(false);
@@ -97,8 +55,14 @@ export default function App() {
   const [senhaAuth, setSenhaAuth] = useState('');
   const [carregandoAuth, setCarregandoAuth] = useState(false);
 
-  // Navegação Principal controlada EXCLUSIVAMENTE pelo Menu Lateral: 'novo' vs 'historico' vs 'cronometro'
-  const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico' | 'cronometro'>('novo');
+  // Navegação Principal controlada EXCLUSIVAMENTE pelo Menu Lateral: 'novo' vs 'historico' vs 'revisao' (ou 'cronometro')
+  const [abaPrincipal, setAbaPrincipal] = useState<'novo' | 'historico' | 'revisao' | 'cronometro'>('novo');
+
+  // Estados da Página de Revisão e Review do Treino
+  const [ultimoTempoTreino, setUltimoTempoTreino] = useState<string>('00:00');
+  const [rpeReview, setRpeReview] = useState<number>(8);
+  const [sensacoesReview, setSensacoesReview] = useState<string[]>(['🔥 Pump Máximo', '🎯 Foco Total']);
+  const [notasReview, setNotasReview] = useState<string>('');
 
   // Controle de Fase da Aplicação: 1 (Anamnese/Fotos), 2 (Validação), 3 (Ficha de Treino)
   const [faseAtual, setFaseAtual] = useState<1 | 2 | 3>(1);
@@ -322,27 +286,53 @@ export default function App() {
     const tempoFormatado = formatarTempo(tempoTreinoSegundos);
 
     const encerrar = () => {
+      setUltimoTempoTreino(tempoFormatado !== '00:00' ? tempoFormatado : '00:00');
       setTreinoIniciado(false);
       setTreinoPausado(false);
       setTempoTreinoSegundos(0);
       setTimestampInicioTreino(null);
       setDescansoAtivo(false);
       setTimestampFimDescanso(null);
+      setAbaPrincipal('revisao');
     };
 
     if (typeof window !== 'undefined' && typeof (window as any).confirm === 'function') {
-      if ((window as any).confirm(`Finalizar Treino\n\nParabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`)) {
+      if ((window as any).confirm(`Finalizar Treino\n\nParabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro e ir para a Revisão do Treino?`)) {
         encerrar();
       }
     } else {
       Alert.alert(
         'Finalizar Treino',
-        `Parabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro?`,
+        `Parabéns pelo treino! Duração total: ${tempoFormatado}.\nDeseja encerrar o cronômetro e ir para a Revisão do Treino?`,
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Encerrar Treino', style: 'destructive', onPress: encerrar },
+          { text: 'Finalizar e Revisar', style: 'default', onPress: encerrar },
         ]
       );
+    }
+  };
+
+  const handleSalvarReview = async () => {
+    const duracaoAtual = ultimoTempoTreino !== '00:00'
+      ? ultimoTempoTreino
+      : (tempoTreinoSegundos > 0 ? formatarTempo(tempoTreinoSegundos) : '00:00');
+
+    const reviewData = {
+      data: new Date().toISOString(),
+      duracao: duracaoAtual,
+      rpe: rpeReview,
+      sensacoes: sensacoesReview,
+      notas: notasReview,
+    };
+    try {
+      await AsyncStorage.setItem('@my_personal_ultimo_review', JSON.stringify(reviewData));
+      if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+        (window as any).alert('Avaliação Salva!\n\nSeu review do treino foi registrado com sucesso.');
+      } else {
+        Alert.alert('Avaliação Salva', 'Seu review do treino foi registrado com sucesso.');
+      }
+    } catch (e) {
+      console.warn('Erro ao salvar review:', e);
     }
   };
 
@@ -423,7 +413,7 @@ export default function App() {
     setCarregandoAuth(true);
     try {
       const data = await executarCadastroApi(emailAuth, senhaAuth, nome);
-      
+
       try {
         const loginData = await executarLoginApi(emailAuth, senhaAuth);
         if (loginData?.session) {
@@ -697,351 +687,996 @@ export default function App() {
     }
   };
 
-  // SE O USUÁRIO NÃO ESTIVER LOGADO -> EXIBIR TELA DE AUTENTICAÇÃO
+  // SE O USUÁRIO NÃO ESTIVER LOGADO -> EXIBIR TELA DE AUTENTICAÇÃO FRUTIGER AERO
   if (!session) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
-        <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
-        <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }}>
-          <View style={[styles.authCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.authLogo, { color: t.accentGreen }]}>MyPersonal</Text>
+      <LinearGradient colors={t.bgGradient} style={{ flex: 1 }}>
+        <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
+          <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
+          <ScrollView contentContainerStyle={{ padding: 20, flexGrow: 1, justifyContent: 'center' }}>
+            <AeroGlassCard theme={t} style={{ maxWidth: 440, width: '100%', alignSelf: 'center', padding: 26, borderRadius: 28 }}>
+              {/* LOGO E BADGE AERO */}
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 32, fontWeight: '900', color: t.accentAqua, letterSpacing: 0.5 }}>My</Text>
+                  <Text style={{ fontSize: 32, fontWeight: '900', color: t.accentLime, letterSpacing: 0.5 }}>Personal</Text>
+                </View>
+                <AeroBadge label="PERSONAL AI" theme={t} color={t.accentAqua} />
+              </View>
 
-            <View style={[styles.authTabContainer, { backgroundColor: t.inputBg }]}>
-              <TouchableOpacity
-                style={[
-                  styles.authTab,
-                  abaAuth === 'login' && {
-                    backgroundColor: t.glassButtonBg,
-                    borderColor: t.glassButtonBorder,
-                    borderWidth: 1,
-                  },
-                ]}
-                onPress={() => setAbaAuth('login')}
-              >
-                <Text
-                  style={[
-                    styles.authTabText,
-                    abaAuth === 'login' ? { color: t.glassButtonText } : { color: t.textSecondary },
-                  ]}
-                >
-                  Entrar
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.authTab,
-                  abaAuth === 'cadastro' && {
-                    backgroundColor: t.glassButtonBg,
-                    borderColor: t.glassButtonBorder,
-                    borderWidth: 1,
-                  },
-                ]}
-                onPress={() => setAbaAuth('cadastro')}
-              >
-                <Text
-                  style={[
-                    styles.authTabText,
-                    abaAuth === 'cadastro' ? { color: t.glassButtonText } : { color: t.textSecondary },
-                  ]}
-                >
-                  Criar Conta
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {abaAuth === 'cadastro' && (
-              <View>
-                <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
-                  value={nome}
-                  onChangeText={setNome}
-                  placeholder="Ex: Pedro Pereira"
-                  placeholderTextColor={t.textSecondary}
+              {/* ABAS BOLHA (ENTRAR / CRIAR CONTA) */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+                <AeroBubbleChip
+                  style={{ flex: 1 }}
+                  label="Entrar"
+                  active={abaAuth === 'login'}
+                  onPress={() => setAbaAuth('login')}
+                  theme={t}
+                />
+                <AeroBubbleChip
+                  style={{ flex: 1 }}
+                  label="Criar Conta"
+                  active={abaAuth === 'cadastro'}
+                  onPress={() => setAbaAuth('cadastro')}
+                  theme={t}
                 />
               </View>
-            )}
 
-            <Text style={[styles.label, { color: t.textSecondary }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
-              value={emailAuth}
-              onChangeText={setEmailAuth}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="seuemail@exemplo.com"
-              placeholderTextColor={t.textSecondary}
-            />
+              {abaAuth === 'cadastro' && (
+                <View>
+                  <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
+                    value={nome}
+                    onChangeText={setNome}
+                    placeholder="Ex: Pedro Pereira"
+                    placeholderTextColor={t.textSecondary}
+                  />
+                </View>
+              )}
 
-            <Text style={[styles.label, { color: t.textSecondary }]}>Senha</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
-              value={senhaAuth}
-              onChangeText={setSenhaAuth}
-              secureTextEntry
-              placeholder="••••••••"
-              placeholderTextColor={t.textSecondary}
-            />
+              <Text style={[styles.label, { color: t.textSecondary }]}>Email</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
+                value={emailAuth}
+                onChangeText={setEmailAuth}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="seuemail@exemplo.com"
+                placeholderTextColor={t.textSecondary}
+              />
 
-            {carregandoAuth ? (
-              <ActivityIndicator size="large" color={t.accentGreen} style={{ marginTop: 15 }} />
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  {
-                    backgroundColor: t.glassButtonBg,
-                    borderColor: t.glassButtonBorder,
-                    borderWidth: 1,
-                  },
-                ]}
-                onPress={abaAuth === 'login' ? handleLogin : handleCadastro}
-              >
-                <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                  {abaAuth === 'login' ? 'Entrar no App' : 'Criar Minha Conta'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+              <Text style={[styles.label, { color: t.textSecondary }]}>Senha</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
+                value={senhaAuth}
+                onChangeText={setSenhaAuth}
+                secureTextEntry
+                placeholder="••••••••"
+                placeholderTextColor={t.textSecondary}
+              />
+
+              {carregandoAuth ? (
+                <ActivityIndicator size="large" color={t.accentLime} style={{ marginTop: 15 }} />
+              ) : (
+                <View style={{ marginTop: 15 }}>
+                  <AeroBubbleButton
+                    title={abaAuth === 'login' ? 'Entrar no App' : 'Criar Minha Conta'}
+                    onPress={abaAuth === 'login' ? handleLogin : handleCadastro}
+                    theme={t}
+                  />
+                </View>
+              )}
+            </AeroGlassCard>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
-  // TELA PRINCIPAL
+  // TELA PRINCIPAL FRUTIGER AERO
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]}>
-      <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
+    <LinearGradient colors={t.bgGradient} style={{ flex: 1 }}>
+      <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
+        <StatusBar barStyle={t.statusBar} backgroundColor={t.headerBg} />
 
-      {/* HEADER PRINCIPAL */}
-      <View style={[styles.header, { backgroundColor: t.headerBg, borderColor: t.cardBorder }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={[styles.headerTitle, { color: t.textPrimary }]}>MyPersonal</Text>
-            <Text style={[styles.headerUserText, { color: t.accentGreen }]}>Olá, {nome || session.user.email}</Text>
-          </View>
-          <TouchableOpacity
-            style={[
-              styles.menuBtn,
-              {
-                backgroundColor: t.glassButtonBg,
-                borderColor: t.glassButtonBorder,
-                borderWidth: 1,
-              },
-            ]}
-            onPress={() => setMenuLateralVisivel(true)}
-          >
-            <Text style={[styles.menuBtnText, { color: t.glassButtonText }]}>Menu</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ABA 3: CRONÔMETRO DE TREINO & TIMER DE DESCANSO */}
-      {abaPrincipal === 'cronometro' && (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* CARD 1: CRONÔMETRO DO TEMPO TOTAL DE TREINO */}
-          <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder, marginBottom: 16 }]}>
-            <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Tempo Total de Treino</Text>
-            <Text style={{ color: t.textSecondary, fontSize: 12, marginBottom: 15 }}>
-              Contabilize a duração total da sua sessão na academia.
-            </Text>
-
-            {/* RELÓGIO DIGITAL GRANDE */}
-            <View
-              style={{
-                alignItems: 'center',
-                paddingVertical: 20,
-                backgroundColor: t.inputBg,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: t.cardBorder,
-                marginBottom: 16,
-              }}
-            >
-              <Text style={{ fontSize: 44, fontWeight: 'bold', color: t.accentGreen, letterSpacing: 2 }}>
-                {formatarTempo(tempoTreinoSegundos)}
-              </Text>
-              <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 4 }}>
-                {!treinoIniciado ? 'Pronto para iniciar' : treinoPausado ? 'Treino Pausado' : 'Treino em Andamento'}
+        {/* HEADER PRINCIPAL FRUTIGER AERO COM LIQUID GLASS */}
+        <View
+          style={{
+            backgroundColor: t.headerBg,
+            borderBottomWidth: 1.2,
+            borderBottomColor: t.cardBorder,
+            paddingHorizontal: 18,
+            paddingVertical: 14,
+            position: 'relative',
+          }}
+        >
+          {/* LUZ DE TOPO DO HEADER */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 1.5,
+              backgroundColor: t.cardHighlight,
+            }}
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: t.accentAqua }}>My</Text>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: t.accentLime }}>Personal</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: t.textSecondary, marginTop: 2, fontWeight: '600' }}>
+                Olá, <Text style={{ color: t.accentLime, fontWeight: 'bold' }}>{nome || session.user.email?.split('@')[0]}</Text>
               </Text>
             </View>
+            <AeroBubbleButton
+              variant="glass"
+              title="☰ Menu"
+              onPress={() => setMenuLateralVisivel(true)}
+              theme={t}
+              style={{
+                borderRadius: 16,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: 'transparent',
+                shadowOpacity: 0,
+                elevation: 0,
+              }}
+              textStyle={{ fontSize: 13 }}
+            />
+          </View>
+        </View>
 
-            {/* CONTROLES DO CRONÔMETRO TOTAL */}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {!treinoIniciado ? (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    {
-                      flex: 1,
-                      marginTop: 0,
-                      backgroundColor: t.glassButtonBg,
-                      borderColor: t.glassButtonBorder,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  onPress={handleIniciarOuContinuarTreino}
-                >
-                  <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                    Iniciar Treino
+        {/* ABA 3: REVISÃO & REVIEW DO TREINO FRUTIGER AERO */}
+        {(abaPrincipal === 'revisao' || abaPrincipal === 'cronometro') && (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {(() => {
+              const tData = treinoAtivoSalvo?.treino_json?.treino;
+              const sessoes = tData?.sessoes || [];
+              const sessaoAtual = sessoes[sessaoAtivaIndex] || sessoes[0];
+
+              let totalSeriesPlanejadas = 0;
+              let totalSeriesConcluidas = 0;
+              let totalVolumeKg = 0;
+
+              if (sessaoAtual?.exercicios) {
+                sessaoAtual.exercicios.forEach((ex: any) => {
+                  const numSeries = Number(ex.series) || 3;
+                  totalSeriesPlanejadas += numSeries;
+                  for (let s = 0; s < numSeries; s++) {
+                    const key = `${sessaoAtivaIndex}_${ex.nome}_${s}`;
+                    const reg = registrosCargas[key];
+                    if (reg?.concluido) {
+                      totalSeriesConcluidas++;
+                      const c = parseFloat(reg.carga) || 0;
+                      const r = parseInt(reg.reps) || 0;
+                      totalVolumeKg += (c * r);
+                    }
+                  }
+                });
+              }
+
+              const duracaoExibicao = ultimoTempoTreino !== '00:00'
+                ? ultimoTempoTreino
+                : (tempoTreinoSegundos > 0 ? formatarTempo(tempoTreinoSegundos) : '00:00');
+
+              return (
+                <AeroGlassCard theme={t} style={{ borderRadius: 28, padding: 22 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Revisão & Review do Treino</Text>
+                    <AeroBadge label={treinoIniciado ? 'EM ANDAMENTO' : 'SESSÃO FINALIZADA'} theme={t} color={treinoIniciado ? t.accentLime : t.accentAqua} />
+                  </View>
+                  <Text style={{ color: t.textSecondary, fontSize: 13, marginBottom: 18 }}>
+                    Resumo biomecânico e registro de percepção de esforço (RPE) da sua sessão.
                   </Text>
-                </TouchableOpacity>
-              ) : (
-                <>
-                  {treinoPausado ? (
-                    <TouchableOpacity
-                      style={[
-                        styles.primaryButton,
-                        {
-                          flex: 1,
-                          marginTop: 0,
-                          backgroundColor: t.glassButtonBg,
-                          borderColor: t.glassButtonBorder,
-                          borderWidth: 1,
-                        },
-                      ]}
-                      onPress={handleIniciarOuContinuarTreino}
-                    >
-                      <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>
-                        Continuar
+
+                  {/* MINI-CARDS DE RESUMO DA SESSÃO */}
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
+                    {/* DURAÇÃO */}
+                    <View style={{ flex: 1, backgroundColor: t.inputBg, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, padding: 12, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11.5, color: t.textSecondary, fontWeight: '600' }}>⏱️ Duração</Text>
+                      <Text style={{ fontSize: 18, fontWeight: 'bold', color: t.accentAqua, marginTop: 4 }}>
+                        {duracaoExibicao}
                       </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[
-                        styles.primaryButton,
-                        { flex: 1, marginTop: 0, backgroundColor: '#f59e0b', borderWidth: 0 },
-                      ]}
-                      onPress={handlePausarTreino}
-                    >
-                      <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Pausar</Text>
-                    </TouchableOpacity>
+                    </View>
+
+                    {/* SÉRIES CONCLUÍDAS */}
+                    <View style={{ flex: 1, backgroundColor: t.inputBg, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, padding: 12, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11.5, color: t.textSecondary, fontWeight: '600' }}>🏋️‍♂️ Séries Feitas</Text>
+                      <Text style={{ fontSize: 18, fontWeight: 'bold', color: t.accentLime, marginTop: 4 }}>
+                        {totalSeriesConcluidas}/{totalSeriesPlanejadas || '0'}
+                      </Text>
+                    </View>
+
+                    {/* VOLUME DE CARGA */}
+                    <View style={{ flex: 1, backgroundColor: t.inputBg, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, padding: 12, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11.5, color: t.textSecondary, fontWeight: '600' }}>⚖️ Volume Total</Text>
+                      <Text style={{ fontSize: 18, fontWeight: 'bold', color: t.accentLime, marginTop: 4 }}>
+                        {totalVolumeKg > 0 ? `${totalVolumeKg.toLocaleString('pt-BR')} kg` : '0 kg'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* IDENTIFICAÇÃO DO TREINO REVISADO */}
+                  {sessaoAtual && (
+                    <View style={{ backgroundColor: 'rgba(0, 210, 255, 0.08)', borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, padding: 12, marginBottom: 20 }}>
+                      <Text style={{ fontSize: 12, color: t.textSecondary }}>Ficha Ativa:</Text>
+                      <Text style={{ fontSize: 14, fontWeight: 'bold', color: t.accentAqua, marginTop: 2 }}>
+                        Dia {sessaoAtivaIndex + 1} - {String(sessaoAtual.nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
+                      </Text>
+                    </View>
                   )}
 
-                  <TouchableOpacity
+                  {/* PERCEPÇÃO DE ESFORÇO (RPE / ESCALA BORG) */}
+                  <Text style={{ fontSize: 13.5, fontWeight: 'bold', color: t.textPrimary, marginBottom: 8 }}>
+                    Percepção de Esforço (RPE da Sessão):
+                  </Text>
+                  <Text style={{ fontSize: 12, color: t.textSecondary, marginBottom: 12 }}>
+                    Como você avalia a intensidade geral do treino hoje?
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                    {[
+                      { rpe: 6, label: 'RPE 6 - Leve' },
+                      { rpe: 7, label: 'RPE 7 - Moderado (3 RIR)' },
+                      { rpe: 8, label: 'RPE 8 - Desafiador (2 RIR)' },
+                      { rpe: 9, label: 'RPE 9 - Muito Difícil (1 RIR)' },
+                      { rpe: 10, label: 'RPE 10 - Até a Falha' },
+                    ].map((item) => (
+                      <AeroBubbleChip
+                        key={item.rpe}
+                        label={item.label}
+                        active={rpeReview === item.rpe}
+                        onPress={() => setRpeReview(item.rpe)}
+                        theme={t}
+                      />
+                    ))}
+                  </View>
+
+                  {/* SENSAÇÕES & FEEDBACK FISIOLÓGICO */}
+                  <Text style={{ fontSize: 13.5, fontWeight: 'bold', color: t.textPrimary, marginBottom: 8 }}>
+                    Sensações do Treino:
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                    {[
+                      '🔥 Pump Máximo',
+                      '⚡ Alta Energia',
+                      '🎯 Foco Total',
+                      '💪 Cargas Superadas',
+                      '😴 Fadiga Elevada',
+                      '⚠️ Desconforto Articular',
+                    ].map((sensacao) => {
+                      const ativo = sensacoesReview.includes(sensacao);
+                      return (
+                        <AeroBubbleChip
+                          key={sensacao}
+                          label={sensacao}
+                          active={ativo}
+                          onPress={() => {
+                            if (ativo) {
+                              setSensacoesReview(sensacoesReview.filter((s) => s !== sensacao));
+                            } else {
+                              setSensacoesReview([...sensacoesReview, sensacao]);
+                            }
+                          }}
+                          theme={t}
+                        />
+                      );
+                    })}
+                  </View>
+
+                  {/* FEEDBACK / OBSERVAÇÕES DO ATLETA */}
+                  <Text style={{ fontSize: 13.5, fontWeight: 'bold', color: t.textPrimary, marginBottom: 8 }}>
+                    Notas e Observações da Sessão:
+                  </Text>
+                  <TextInput
                     style={[
-                      styles.primaryButton,
-                      { flex: 1, marginTop: 0, backgroundColor: '#ef4444', borderWidth: 0 },
+                      styles.input,
+                      {
+                        backgroundColor: t.inputBg,
+                        borderColor: t.inputBorder,
+                        color: t.textPrimary,
+                        minHeight: 80,
+                        textAlignVertical: 'top',
+                        paddingTop: 10,
+                        marginBottom: 20,
+                      },
                     ]}
-                    onPress={handleFinalizarTreino}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: '#ffffff' }]}>Finalizar</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-        </ScrollView>
-      )}
+                    multiline
+                    numberOfLines={3}
+                    placeholder="Ex: Treino muito produtivo! Senti excelente ativação nas paralelas e aumentei 2kg nas séries finais..."
+                    placeholderTextColor={t.textSecondary}
+                    value={notasReview}
+                    onChangeText={setNotasReview}
+                  />
 
-      {/* ABA 2: MEU TREINO ATIVO NO SUPABASE */}
-      {abaPrincipal === 'historico' && (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Ficha de Treino Ativa</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {treinoAtivoSalvo && (
-                  <TouchableOpacity
+                  {/* BOTÕES DE AÇÃO */}
+                  <View style={{ gap: 10 }}>
+                    <AeroBubbleButton
+                      title="✅ Salvar Review do Treino"
+                      onPress={handleSalvarReview}
+                      theme={t}
+                    />
+
+                    <AeroBubbleButton
+                      variant="glass"
+                      title="📋 Ver Minha Ficha de Treino"
+                      onPress={() => setAbaPrincipal('historico')}
+                      theme={t}
+                    />
+                  </View>
+                </AeroGlassCard>
+              );
+            })()}
+          </ScrollView>
+        )}
+
+        {/* ABA 2: MEU TREINO ATIVO NO SUPABASE FRUTIGER AERO */}
+        {abaPrincipal === 'historico' && (
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <AeroGlassCard theme={t} style={{ borderRadius: 28, padding: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Ficha de Treino Ativa</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  {/* WIDGET CRONÔMETRO LIQUID GLASS COM APENAS ÍCONES (CONFORME ESBOÇO DO USUÁRIO) */}
+                  <View
                     style={{
-                      backgroundColor: t.glassButtonBg,
-                      borderColor: t.glassButtonBorder,
-                      borderWidth: 1,
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: treinoIniciado
+                        ? (treinoPausado ? 'rgba(0, 145, 255, 0.16)' : 'rgba(0, 230, 118, 0.14)')
+                        : t.glassButtonBg,
+                      borderColor: treinoIniciado
+                        ? (treinoPausado ? t.accentAqua : t.accentLime)
+                        : t.cardBorder,
+                      borderWidth: 1.2,
+                      borderRadius: 14,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      gap: 6,
                     }}
-                    onPress={() => exportarFichaTreinoPDF(treinoAtivoSalvo.treino_json, nome || session?.user?.email)}
                   >
-                    <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Exportar PDF</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={carregarTreinoAtivo}>
-                  <Text style={{ color: t.accentGreen, fontSize: 13, fontWeight: 'bold' }}>Atualizar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                    {/* INDICADOR LUMINOSO PULSANTE */}
+                    <View
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: 4,
+                        backgroundColor: treinoIniciado
+                          ? (treinoPausado ? t.accentAqua : t.accentLime)
+                          : t.textMuted,
+                      }}
+                    />
 
-            {carregandoHistorico ? (
-              <ActivityIndicator size="large" color={t.accentGreen} style={{ marginVertical: 30 }} />
-            ) : !treinoAtivoSalvo ? (
-              <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                <Text style={{ color: t.textPrimary, fontWeight: 'bold', fontSize: 16 }}>Nenhum treino ativo encontrado</Text>
-                <Text style={{ color: t.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
-                  Abra o Menu no topo e selecione "Gerar Novo Treino" para prescrever sua primeira ficha inteligente!
+                    {/* MOSTRADOR DIGITAL */}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 'bold',
+                        color: treinoIniciado
+                          ? (treinoPausado ? t.accentAqua : t.accentLime)
+                          : t.textPrimary,
+                        letterSpacing: 0.5,
+                        minWidth: 44,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {formatarTempo(tempoTreinoSegundos)}
+                    </Text>
+
+                    {/* DIVISOR VERTICAL */}
+                    <View style={{ width: 1, height: 14, backgroundColor: t.cardBorder, opacity: 0.7 }} />
+
+                    {/* FUNÇÕES DO CRONÔMETRO: APENAS OS ÍCONES */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      {!treinoIniciado ? (
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={handleIniciarOuContinuarTreino}
+                          style={{ padding: 4 }}
+                          hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                          accessibilityLabel="Iniciar Treino"
+                        >
+                          <Play size={14} color={t.accentLime} fill={t.accentLime} />
+                        </TouchableOpacity>
+                      ) : (
+                        <>
+                          {treinoPausado ? (
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              onPress={handleIniciarOuContinuarTreino}
+                              style={{ padding: 4 }}
+                              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                              accessibilityLabel="Continuar Treino"
+                            >
+                              <Play size={14} color={t.accentLime} fill={t.accentLime} />
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              activeOpacity={0.7}
+                              onPress={handlePausarTreino}
+                              style={{ padding: 4 }}
+                              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                              accessibilityLabel="Pausar Treino"
+                            >
+                              <Pause size={14} color={t.accentAqua} fill={t.accentAqua} />
+                            </TouchableOpacity>
+                          )}
+
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={handleFinalizarTreino}
+                            style={{ padding: 4 }}
+                            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                            accessibilityLabel="Finalizar Treino"
+                          >
+                            <Square size={13} color="#ff4d4d" fill="#ff4d4d" />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+
+                  {treinoAtivoSalvo && (
+                    <AeroBubbleButton
+                      variant="glass"
+                      title="📄 PDF"
+                      onPress={() => exportarFichaTreinoPDF(treinoAtivoSalvo.treino_json, nome || session?.user?.email)}
+                      theme={t}
+                      style={{ borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}
+                      textStyle={{ fontSize: 12 }}
+                    />
+                  )}
+                  <AeroBubbleButton
+                    variant="glass"
+                    title="⟳ Atualizar"
+                    onPress={carregarTreinoAtivo}
+                    theme={t}
+                    style={{ borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}
+                    textStyle={{ fontSize: 12 }}
+                  />
+                </View>
+              </View>
+
+              {carregandoHistorico ? (
+                <ActivityIndicator size="large" color={t.accentLime} style={{ marginVertical: 30 }} />
+              ) : !treinoAtivoSalvo ? (
+                <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                  <Text style={{ color: t.textPrimary, fontWeight: 'bold', fontSize: 16 }}>Nenhum treino ativo encontrado</Text>
+                  <Text style={{ color: t.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
+                    Abra o Menu no topo e selecione "Gerar Novo Treino" para prescrever sua primeira ficha inteligente!
+                  </Text>
+                </View>
+              ) : (
+                (() => {
+                  const tData = treinoAtivoSalvo.treino_json?.treino;
+                  const sessoes = tData?.sessoes || [];
+                  const sessaoAtual = sessoes[sessaoAtivaIndex] || sessoes[0];
+
+                  return (
+                    <View>
+                      <Text style={{ color: t.textSecondary, fontSize: 13, marginBottom: 14 }}>
+                        Divisão: <Text style={{ color: t.accentLime, fontWeight: 'bold' }}>{tData?.divisao_nome}</Text> | {tData?.frequencia_semanal}x por semana
+                      </Text>
+
+                      {/* SELEÇÃO DE DIAS DE TREINO (BOLHAS INTERATIVAS) */}
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          {sessoes.map((s: any, idx: number) => (
+                            <AeroBubbleChip
+                              key={idx}
+                              label={`Dia ${idx + 1}`}
+                              active={sessaoAtivaIndex === idx}
+                              onPress={() => setSessaoAtivaIndex(idx)}
+                              theme={t}
+                            />
+                          ))}
+                        </View>
+                      </ScrollView>
+
+                      {/* SESSÃO DE TREINO SELECIONADA */}
+                      {sessaoAtual && (
+                        <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder, borderRadius: 22 }]}>
+                          <Text style={[styles.sessionTitle, { color: t.accentLime }]}>
+                            Dia {sessaoAtivaIndex + 1} - {String(sessaoAtual.nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
+                          </Text>
+
+                          {sessaoAtual.exercicios?.map((ex: any, eIdx: number) => (
+                            <View key={eIdx} style={[styles.exerciseCapsule, { backgroundColor: t.card, borderColor: t.cardBorder, borderRadius: 20 }]}>
+                              <View style={styles.exerciseHeader}>
+                                <Text style={[styles.exerciseName, { color: t.textPrimary }]}>{eIdx + 1}. {ex.nome}</Text>
+                                <AeroBubbleButton
+                                  variant="secondary"
+                                  title="Substituir"
+                                  onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex, true)}
+                                  theme={t}
+                                  style={{ borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}
+                                  textStyle={{ fontSize: 11.5 }}
+                                />
+                              </View>
+
+                              {/* PÍLULAS DE ESTATÍSTICAS AERO */}
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                                <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
+                                  <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Séries: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.series_trabalho}</Text></Text>
+                                </View>
+                                <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
+                                  <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Reps: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.reps}</Text></Text>
+                                </View>
+                                <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
+                                  <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
+                                </View>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.metricPill,
+                                    {
+                                      backgroundColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBg : t.inputBg,
+                                      borderColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBorder : t.cardBorder,
+                                      borderWidth: 1,
+                                    },
+                                  ]}
+                                  onPress={() => handleIniciarDescansoExercicio(ex.nome, ex.descanso_segundos || 60)}
+                                >
+                                  <Text style={[styles.metricPillText, { color: t.textSecondary }]}>
+                                    Descanso: <Text style={{ color: t.accentAqua, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                              <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
+
+                              {/* BARRA DO TIMER DE DESCANSO INTEGRADO DO EXERCÍCIO */}
+                              {descansoAtivo && exercicioDescansoAtivo === ex.nome && (
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    marginTop: 10,
+                                    backgroundColor: 'rgba(0, 210, 255, 0.16)',
+                                    borderColor: 'rgba(0, 210, 255, 0.50)',
+                                    borderWidth: 1,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                    borderRadius: 14,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentAqua, flex: 1 }}>
+                                    Descansando: {formatarTempo(descansoSegundosRestantes)}
+                                  </Text>
+                                  <AeroBubbleButton
+                                    variant="secondary"
+                                    title="Pausar"
+                                    onPress={handlePausarDescanso}
+                                    theme={t}
+                                    style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}
+                                    textStyle={{ fontSize: 11 }}
+                                  />
+                                  <AeroBubbleButton
+                                    variant="secondary"
+                                    title="Resetar"
+                                    onPress={handleResetarDescanso}
+                                    theme={t}
+                                    style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}
+                                    textStyle={{ fontSize: 11 }}
+                                  />
+                                </View>
+                              )}
+
+                              {/* PAINEL DE REGISTRO DE CARGAS AERO */}
+                              <View
+                                style={{
+                                  marginTop: 12,
+                                  padding: 12,
+                                  backgroundColor: t.inputBg,
+                                  borderRadius: 16,
+                                  borderWidth: 1,
+                                  borderColor: t.cardBorder,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.accentLime, letterSpacing: 0.5 }}>
+                                    REGISTRO DE CARGAS (KG) & REPETIÇÕES
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: t.textSecondary }}>
+                                    {ex.series_trabalho || 3} Séries
+                                  </Text>
+                                </View>
+
+                                {Array.from({ length: Number(ex.series_trabalho) || 3 }).map((_, sIdx) => {
+                                  const key = `${ex.nome}_serie_${sIdx}`;
+                                  const reg = registrosCargas[key] || { carga: '', reps: '', concluido: false };
+
+                                  return (
+                                    <View
+                                      key={sIdx}
+                                      style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        marginBottom: 6,
+                                        backgroundColor: reg.concluido ? 'rgba(0, 230, 118, 0.15)' : t.card,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 6,
+                                        borderRadius: 12,
+                                        borderWidth: 1,
+                                        borderColor: reg.concluido ? t.accentLime : t.cardBorder,
+                                      }}
+                                    >
+                                      <Text style={{ width: 52, fontSize: 11, fontWeight: 'bold', color: t.textPrimary }}>
+                                        Série {sIdx + 1}:
+                                      </Text>
+
+                                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                        <TextInput
+                                          style={{
+                                            flex: 1,
+                                            backgroundColor: t.inputBg,
+                                            borderColor: t.inputBorder,
+                                            borderWidth: 1,
+                                            borderRadius: 8,
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 3,
+                                            color: t.textPrimary,
+                                            fontSize: 12,
+                                            textAlign: 'center',
+                                          }}
+                                          placeholder="kg"
+                                          placeholderTextColor={t.textSecondary}
+                                          keyboardType="numeric"
+                                          value={reg.carga}
+                                          onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, txt, reg.reps, reg.concluido)}
+                                        />
+                                        <Text style={{ fontSize: 10, color: t.textSecondary }}>kg</Text>
+                                      </View>
+
+                                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                        <TextInput
+                                          style={{
+                                            flex: 1,
+                                            backgroundColor: t.inputBg,
+                                            borderColor: t.inputBorder,
+                                            borderWidth: 1,
+                                            borderRadius: 8,
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 3,
+                                            color: t.textPrimary,
+                                            fontSize: 12,
+                                            textAlign: 'center',
+                                          }}
+                                          placeholder="reps"
+                                          placeholderTextColor={t.textSecondary}
+                                          keyboardType="numeric"
+                                          value={reg.reps}
+                                          onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, reg.carga, txt, reg.concluido)}
+                                        />
+                                        <Text style={{ fontSize: 10, color: t.textSecondary }}>reps</Text>
+                                      </View>
+
+                                      <AeroBubbleButton
+                                        variant={reg.concluido ? 'check' : 'glass'}
+                                        title={reg.concluido ? '✓ Feito' : 'Check'}
+                                        onPress={() => handleAlternarConclusaoSerie(ex.nome, sIdx, reg.carga, reg.reps, !reg.concluido, ex.descanso_segundos)}
+                                        theme={t}
+                                        style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}
+                                        textStyle={{ fontSize: 10 }}
+                                      />
+                                    </View>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()
+              )}
+            </AeroGlassCard>
+          </ScrollView>
+        )}
+
+        {/* ABA 1: GERAR NOVO TREINO (FLUXO 3 FASES FRUTIGER AERO) */}
+        {abaPrincipal === 'novo' && (
+          <>
+            {carregando ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={t.accentLime} />
+                <Text style={[styles.loadingText, { color: t.textSecondary, marginTop: 14, fontWeight: '600' }]}>
+                  {faseAtual === 1 ? 'Analisando fotos e biotipo com Gemini AI...' : 'Prescrevendo sua ficha de treino...'}
                 </Text>
               </View>
             ) : (
-              (() => {
-                const tData = treinoAtivoSalvo.treino_json?.treino;
-                const sessoes = tData?.sessoes || [];
-                const sessaoAtual = sessoes[sessaoAtivaIndex] || sessoes[0];
+              <ScrollView contentContainerStyle={styles.scrollContent}>
+                {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS FRUTIGER AERO */}
+                {faseAtual === 1 && (
+                  <AeroGlassCard theme={t} style={{ borderRadius: 28, padding: 22 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                      <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Dados Biométricos</Text>
+                      {isDevUser && (
+                        <AeroBubbleButton
+                          variant="glass"
+                          title="⚡ Teste Rápido"
+                          onPress={handlePreencherDadosDemo}
+                          theme={t}
+                          style={{
+                            borderRadius: 12,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderWidth: 0,
+                            borderColor: 'transparent',
+                            shadowOpacity: 0,
+                            elevation: 0,
+                          }}
+                          textStyle={{ fontSize: 11.5 }}
+                        />
+                      )}
+                    </View>
 
-                return (
-                  <View>
-                    <Text style={{ color: t.textSecondary, fontSize: 13, marginBottom: 14 }}>
-                      Divisão: <Text style={{ color: t.accentGreen, fontWeight: 'bold' }}>{tData?.divisao_nome}</Text> | {tData?.frequencia_semanal}x por semana
+                    <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
+                    <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor={t.textSecondary} />
+
+                    <View style={styles.row}>
+                      <View style={styles.halfInput}>
+                        <Text style={[styles.label, { color: t.textSecondary }]}>Idade</Text>
+                        <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={idade} onChangeText={setIdade} keyboardType="numeric" placeholder="24" placeholderTextColor={t.textSecondary} />
+                      </View>
+                      <View style={styles.halfInput}>
+                        <Text style={[styles.label, { color: t.textSecondary }]}>Peso (kg)</Text>
+                        <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={peso} onChangeText={setPeso} keyboardType="numeric" placeholder="78" placeholderTextColor={t.textSecondary} />
+                      </View>
+                    </View>
+
+                    <View style={styles.row}>
+                      <View style={styles.halfInput}>
+                        <Text style={[styles.label, { color: t.textSecondary }]}>Altura (cm)</Text>
+                        <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={altura} onChangeText={setAltura} keyboardType="numeric" placeholder="178" placeholderTextColor={t.textSecondary} />
+                      </View>
+                      <View style={styles.halfInput}>
+                        <Text style={[styles.label, { color: t.textSecondary }]}>Dias p/ semana</Text>
+                        <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={dias} onChangeText={setDias} keyboardType="numeric" placeholder="4" placeholderTextColor={t.textSecondary} />
+                      </View>
+                    </View>
+
+                    {/* SELEÇÃO DO OBJETIVO (PÍLULAS BOLHA AERO) */}
+                    <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Objetivo Principal:</Text>
+                    <View style={styles.chipContainer}>
+                      {listaObjetivos.map((item) => (
+                        <AeroBubbleChip
+                          key={item}
+                          label={item}
+                          active={objetivo === item}
+                          onPress={() => setObjetivo(item)}
+                          theme={t}
+                        />
+                      ))}
+                    </View>
+
+                    {/* SELEÇÃO DO NÍVEL (PÍLULAS BOLHA AERO) */}
+                    <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Nível / Tempo de Treino:</Text>
+                    <View style={styles.chipContainer}>
+                      {listaNiveis.map((item) => (
+                        <AeroBubbleChip
+                          key={item}
+                          label={item}
+                          active={nivel === item}
+                          onPress={() => setNivel(item)}
+                          theme={t}
+                        />
+                      ))}
+                    </View>
+
+                    {/* OBSERVAÇÕES E PREFERÊNCIAS */}
+                    <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Observações / Preferências</Text>
+                    <TextInput
+                      style={[styles.input, styles.multilineInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
+                      value={observacoes}
+                      onChangeText={setObservacoes}
+                      multiline
+                      numberOfLines={3}
+                      placeholder="Ex: Quero focar mais em glúteos e ombros. Não quero exercícios de braço na sexta-feira."
+                      placeholderTextColor={t.textSecondary}
+                    />
+
+                    {/* REGRA DO NUTRICIONISTA COM BOLHAS TÁTEIS */}
+                    <Text style={[styles.label, { marginTop: 15, color: t.textSecondary }]}>Você já passou por consulta com nutricionista?</Text>
+                    <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                      <AeroBubbleChip
+                        style={{ flex: 1 }}
+                        label="Sim, já consultei"
+                        active={passouNutricionista === true}
+                        onPress={() => setPassouNutricionista(true)}
+                        theme={t}
+                      />
+                      <AeroBubbleChip
+                        style={{ flex: 1 }}
+                        label="Não, nunca consultei"
+                        active={passouNutricionista === false}
+                        onPress={() => setPassouNutricionista(false)}
+                        theme={t}
+                      />
+                    </View>
+
+                    {passouNutricionista === true && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={[styles.label, { color: t.textSecondary }]}>Digite seu % de Gordura (BF) do nutricionista:</Text>
+                        <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={bfInformado} onChangeText={setBfInformado} keyboardType="numeric" placeholder="Ex: 15" placeholderTextColor={t.textSecondary} />
+                      </View>
+                    )}
+
+                    {passouNutricionista === false && (
+                      <Text style={[styles.infoText, { color: t.accentAqua, marginTop: 4 }]}>
+                        ✨ A visão computacional multimodal da IA estimará o seu % de gordura a partir das fotos.
+                      </Text>
+                    )}
+
+                    {/* UPLOAD DE FOTOS CORPORAIS */}
+                    <Text style={[styles.cardTitle, { marginTop: 22, color: t.textPrimary }]}>Fotos Corporais</Text>
+
+                    <View style={styles.photoContainer}>
+                      {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
+                        <TouchableOpacity
+                          key={tipo}
+                          activeOpacity={0.8}
+                          style={[
+                            styles.photoBox,
+                            {
+                              backgroundColor: t.inputBg,
+                              borderColor: fotos[tipo] ? t.accentLime : t.cardBorder,
+                              borderWidth: fotos[tipo] ? 2 : 1.2,
+                              borderRadius: 20,
+                              overflow: 'hidden',
+                            },
+                          ]}
+                          onPress={() => selecionarFoto(tipo)}
+                        >
+                          {fotos[tipo] ? (
+                            <Image source={{ uri: fotos[tipo]?.uri }} style={styles.photoPreview} />
+                          ) : (
+                            <View style={{ alignItems: 'center', padding: 6 }}>
+                              <Text style={{ fontSize: 18, marginBottom: 2 }}>📸</Text>
+                              <Text style={[styles.photoBoxText, { color: t.accentAqua, fontWeight: 'bold' }]}>
+                                +{tipo.toUpperCase()}
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <AeroBubbleButton
+                      title="⚡ Analisar Biomecânica com IA"
+                      onPress={handleSubmeterAnamnese}
+                      theme={t}
+                      style={{ marginTop: 14 }}
+                    />
+                  </AeroGlassCard>
+                )}
+
+                {/* FASE 2: VALIDAÇÃO DO DIAGNÓSTICO DA IA FRUTIGER AERO */}
+                {faseAtual === 2 && resultadoAvaliacao && (
+                  <AeroGlassCard theme={t} style={{ borderRadius: 28, padding: 22 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                      <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Diagnóstico Visual da IA</Text>
+                      <AeroBadge label="BIO-SCAN MULTIMODAL" theme={t} color={t.accentAqua} />
+                    </View>
+
+                    {/* BADGE ESFÉRICA DE BF ESTIMADO */}
+                    <LinearGradient
+                      colors={['rgba(0, 210, 255, 0.22)', 'rgba(0, 230, 118, 0.14)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        borderRadius: 22,
+                        padding: 16,
+                        borderWidth: 1.2,
+                        borderColor: t.accentLime,
+                        marginBottom: 16,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, color: t.textSecondary, fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>
+                        PERCENTUAL DE GORDURA ESTIMADO (BF)
+                      </Text>
+                      <Text style={{ fontSize: 30, fontWeight: '900', color: t.accentLime, letterSpacing: 1 }}>
+                        {resultadoAvaliacao.avaliacao.bf_estimado}
+                      </Text>
+                    </LinearGradient>
+
+                    <Text style={[styles.sectionHeader, { color: t.accentLime }]}>Pontos Fortes Musculares:</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                      {resultadoAvaliacao.avaliacao.pontos_fortes.map((pf, idx) => (
+                        <AeroBadge key={idx} label={`★ ${pf}`} theme={t} color={t.accentLime} />
+                      ))}
+                    </View>
+
+                    <Text style={[styles.sectionHeader, { color: t.accentAqua }]}>Prioridades Biomecânicas (Foco de Treino):</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                      {resultadoAvaliacao.avaliacao.pontos_fracos.map((pf, idx) => (
+                        <AeroBadge key={idx} label={`⚡ ${pf}`} theme={t} color={t.accentAqua} />
+                      ))}
+                    </View>
+
+                    <Text style={[styles.sectionHeader, { color: t.accentLime }]}>Observações Posturais:</Text>
+                    <Text style={[styles.bodyText, { color: t.textSecondary, marginBottom: 12 }]}>{resultadoAvaliacao.avaliacao.postura_observacoes}</Text>
+
+                    <Text style={[styles.sectionHeader, { color: t.accentLime }]}>Mensagem do Especialista:</Text>
+                    <Text style={[styles.bodyText, { color: t.textSecondary, marginBottom: 16 }]}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
+
+                    <AeroBubbleButton
+                      title="✓ Concordo 100% • Prescrever Treino"
+                      onPress={handleConfirmarEGerarTreino}
+                      theme={t}
+                      style={{ marginTop: 10 }}
+                    />
+                  </AeroGlassCard>
+                )}
+
+                {/* FASE 3: FICHA DE TREINO PRESCRITA FRUTIGER AERO */}
+                {faseAtual === 3 && resultadoTreino && (
+                  <AeroGlassCard theme={t} style={{ borderRadius: 28, padding: 22 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Ficha de Treino Prescrita</Text>
+                      <AeroBubbleButton
+                        variant="glass"
+                        title="📄 Exportar PDF"
+                        onPress={() => exportarFichaTreinoPDF(resultadoTreino, nome || session?.user?.email)}
+                        theme={t}
+                        style={{ borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 }}
+                        textStyle={{ fontSize: 12 }}
+                      />
+                    </View>
+                    <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
+                      Divisão: <Text style={{ color: t.accentLime, fontWeight: 'bold' }}>{resultadoTreino.treino.divisao_nome}</Text> | {resultadoTreino.treino.frequencia_semanal}x por semana
                     </Text>
 
-                    {/* SELEÇÃO DE DIAS DE TREINO (TREINO A, B, C...) */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        {sessoes.map((s: any, idx: number) => {
-                          const isSelected = sessaoAtivaIndex === idx;
+                    {/* BOTAO PRINCIPAL DE DEFINIR COMO TREINO ATIVO */}
+                    <AeroBubbleButton
+                      title="⭐ Definir como Meu Treino Ativo"
+                      onPress={handleDefinirTreinoAtivo}
+                      theme={t}
+                      style={{ marginVertical: 14 }}
+                    />
 
-                          return (
-                            <TouchableOpacity
-                              key={idx}
-                              style={[
-                                styles.dayChip,
-                                {
-                                  backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
-                                  borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
-                                },
-                              ]}
-                              onPress={() => setSessaoAtivaIndex(idx)}
-                            >
-                              <Text
-                                style={[
-                                  styles.dayChipText,
-                                  { color: isSelected ? t.glassButtonText : t.textSecondary },
-                                ]}
-                              >
-                                Dia {idx + 1}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
+                    {/* NAVEGAÇÃO DE DIAS DE TREINO (BOLHAS AERO) */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 12 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {resultadoTreino.treino.sessoes.map((s, idx) => (
+                          <AeroBubbleChip
+                            key={idx}
+                            label={`Dia ${idx + 1}`}
+                            active={sessaoAtivaIndex === idx}
+                            onPress={() => setSessaoAtivaIndex(idx)}
+                            theme={t}
+                          />
+                        ))}
                       </View>
                     </ScrollView>
 
-                    {/* SESSÃO DE TREINO SELECIONADA */}
-                    {sessaoAtual && (
-                      <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]}>
-                        <Text style={[styles.sessionTitle, { color: t.accentGreen }]}>
-                          Dia {sessaoAtivaIndex + 1} - {String(sessaoAtual.nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
+                    {/* SESSÃO ATIVA */}
+                    {resultadoTreino.treino.sessoes[sessaoAtivaIndex] && (
+                      <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder, borderRadius: 22 }]}>
+                        <Text style={[styles.sessionTitle, { color: t.accentLime }]}>
+                          Dia {sessaoAtivaIndex + 1} - {String(resultadoTreino.treino.sessoes[sessaoAtivaIndex].nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
                         </Text>
 
-                        {sessaoAtual.exercicios?.map((ex: any, eIdx: number) => (
-                          <View key={eIdx} style={[styles.exerciseCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+                        {resultadoTreino.treino.sessoes[sessaoAtivaIndex].exercicios.map((ex, eIdx) => (
+                          <View key={eIdx} style={[styles.exerciseCapsule, { backgroundColor: t.card, borderColor: t.cardBorder, borderRadius: 20 }]}>
                             <View style={styles.exerciseHeader}>
                               <Text style={[styles.exerciseName, { color: t.textPrimary }]}>{eIdx + 1}. {ex.nome}</Text>
-                              <TouchableOpacity
-                                style={[
-                                  styles.replaceBtn,
-                                  {
-                                    backgroundColor: t.glassButtonBg,
-                                    borderColor: t.glassButtonBorder,
-                                    borderWidth: 1,
-                                  },
-                                ]}
-                                onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex, true)}
-                              >
-                                <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>Substituir</Text>
-                              </TouchableOpacity>
+                              <AeroBubbleButton
+                                variant="secondary"
+                                title="Substituir"
+                                onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex)}
+                                theme={t}
+                                style={{ borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}
+                                textStyle={{ fontSize: 11.5 }}
+                              />
                             </View>
 
-                            {/* PÍLULAS DE ESTATÍSTICAS ONE UI */}
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                               <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
                                 <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Séries: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.series_trabalho}</Text></Text>
@@ -1064,7 +1699,7 @@ export default function App() {
                                 onPress={() => handleIniciarDescansoExercicio(ex.nome, ex.descanso_segundos || 60)}
                               >
                                 <Text style={[styles.metricPillText, { color: t.textSecondary }]}>
-                                  Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
+                                  Descanso: <Text style={{ color: t.accentAqua, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
                                 </Text>
                               </TouchableOpacity>
                             </View>
@@ -1078,952 +1713,337 @@ export default function App() {
                                   alignItems: 'center',
                                   gap: 10,
                                   marginTop: 10,
-                                  backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                                  borderColor: 'rgba(2, 132, 199, 0.50)',
+                                  backgroundColor: 'rgba(0, 210, 255, 0.16)',
+                                  borderColor: 'rgba(0, 210, 255, 0.50)',
                                   borderWidth: 1,
                                   paddingHorizontal: 12,
                                   paddingVertical: 8,
-                                  borderRadius: 12,
+                                  borderRadius: 14,
                                 }}
                               >
-                                <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentCyan, flex: 1 }}>
+                                <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentAqua, flex: 1 }}>
                                   Descansando: {formatarTempo(descansoSegundosRestantes)}
                                 </Text>
-                                <TouchableOpacity
-                                  style={{
-                                    backgroundColor: t.inputBg,
-                                    borderColor: t.cardBorder,
-                                    borderWidth: 1,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 4,
-                                    borderRadius: 8,
-                                  }}
+                                <AeroBubbleButton
+                                  variant="secondary"
+                                  title="Pausar"
                                   onPress={handlePausarDescanso}
-                                >
-                                  <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Pausar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={{
-                                    backgroundColor: t.inputBg,
-                                    borderColor: t.cardBorder,
-                                    borderWidth: 1,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 4,
-                                    borderRadius: 8,
-                                  }}
+                                  theme={t}
+                                  style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}
+                                  textStyle={{ fontSize: 11 }}
+                                />
+                                <AeroBubbleButton
+                                  variant="secondary"
+                                  title="Resetar"
                                   onPress={handleResetarDescanso}
-                                >
-                                  <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Resetar</Text>
-                                </TouchableOpacity>
+                                  theme={t}
+                                  style={{ borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}
+                                  textStyle={{ fontSize: 11 }}
+                                />
                               </View>
                             )}
-
-                            {/* PAINEL DE REGISTRO DE CARGAS SAMSUNG ONE UI 8.5 */}
-                            <View
-                              style={{
-                                marginTop: 12,
-                                padding: 12,
-                                backgroundColor: t.inputBg,
-                                borderRadius: 14,
-                                borderWidth: 1,
-                                borderColor: t.cardBorder,
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.accentGreen, letterSpacing: 0.5 }}>
-                                  REGISTRO DE CARGAS (KG) & REPETIÇÕES
-                                </Text>
-                                <Text style={{ fontSize: 11, color: t.textSecondary }}>
-                                  {ex.series_trabalho || 3} Séries
-                                </Text>
-                              </View>
-
-                              {Array.from({ length: Number(ex.series_trabalho) || 3 }).map((_, sIdx) => {
-                                const key = `${ex.nome}_serie_${sIdx}`;
-                                const reg = registrosCargas[key] || { carga: '', reps: '', concluido: false };
-
-                                return (
-                                  <View
-                                    key={sIdx}
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 6,
-                                      marginBottom: 6,
-                                      backgroundColor: reg.concluido ? t.glassButtonBg : t.card,
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 6,
-                                      borderRadius: 10,
-                                      borderWidth: 1,
-                                      borderColor: reg.concluido ? t.glassButtonBorder : t.cardBorder,
-                                    }}
-                                  >
-                                    <Text style={{ width: 52, fontSize: 11, fontWeight: 'bold', color: t.textPrimary }}>
-                                      Série {sIdx + 1}:
-                                    </Text>
-
-                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                                      <TextInput
-                                        style={{
-                                          flex: 1,
-                                          backgroundColor: t.inputBg,
-                                          borderColor: t.inputBorder,
-                                          borderWidth: 1,
-                                          borderRadius: 6,
-                                          paddingHorizontal: 6,
-                                          paddingVertical: 3,
-                                          color: t.textPrimary,
-                                          fontSize: 12,
-                                          textAlign: 'center',
-                                        }}
-                                        placeholder="kg"
-                                        placeholderTextColor={t.textSecondary}
-                                        keyboardType="numeric"
-                                        value={reg.carga}
-                                        onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, txt, reg.reps, reg.concluido)}
-                                      />
-                                      <Text style={{ fontSize: 10, color: t.textSecondary }}>kg</Text>
-                                    </View>
-
-                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                                      <TextInput
-                                        style={{
-                                          flex: 1,
-                                          backgroundColor: t.inputBg,
-                                          borderColor: t.inputBorder,
-                                          borderWidth: 1,
-                                          borderRadius: 6,
-                                          paddingHorizontal: 6,
-                                          paddingVertical: 3,
-                                          color: t.textPrimary,
-                                          fontSize: 12,
-                                          textAlign: 'center',
-                                        }}
-                                        placeholder="reps"
-                                        placeholderTextColor={t.textSecondary}
-                                        keyboardType="numeric"
-                                        value={reg.reps}
-                                        onChangeText={(txt) => handleAtualizarCargaExercicio(ex.nome, sIdx, reg.carga, txt, reg.concluido)}
-                                      />
-                                      <Text style={{ fontSize: 10, color: t.textSecondary }}>reps</Text>
-                                    </View>
-
-                                    <TouchableOpacity
-                                      style={{
-                                        backgroundColor: reg.concluido ? t.glassButtonBg : t.inputBg,
-                                        borderColor: reg.concluido ? t.glassButtonBorder : t.cardBorder,
-                                        borderWidth: 1,
-                                        paddingHorizontal: 8,
-                                        paddingVertical: 4,
-                                        borderRadius: 6,
-                                      }}
-                                      onPress={() => handleAlternarConclusaoSerie(ex.nome, sIdx, reg.carga, reg.reps, !reg.concluido, ex.descanso_segundos)}
-                                    >
-                                      <Text style={{ fontSize: 10, fontWeight: 'bold', color: reg.concluido ? t.accentGreen : t.textSecondary }}>
-                                        {reg.concluido ? 'Concluída' : 'Check'}
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                );
-                              })}
-                            </View>
                           </View>
                         ))}
                       </View>
                     )}
-                  </View>
-                );
-              })()
+
+                    <AeroBubbleButton
+                      variant="secondary"
+                      title="Fazer Nova Anamnese"
+                      onPress={() => setFaseAtual(1)}
+                      theme={t}
+                      style={{ marginTop: 16 }}
+                    />
+                  </AeroGlassCard>
+                )}
+              </ScrollView>
             )}
-          </View>
-        </ScrollView>
-      )}
+          </>
+        )}
 
-      {/* ABA 1: GERAR NOVO TREINO (FLUXO 3 FASES ONE UI) */}
-      {abaPrincipal === 'novo' && (
-        <>
-          {carregando ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={t.accentGreen} />
-              <Text style={[styles.loadingText, { color: t.textSecondary }]}>
-                {faseAtual === 1 ? 'Analisando fotos e biotipo com Gemini AI...' : 'Prescrevendo sua ficha de treino...'}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-              {/* FASE 1: FORMULÁRIO DE ANAMNESE E FOTOS */}
-              {faseAtual === 1 && (
-                <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Dados Biométricos</Text>
-                    {isDevUser && (
-                      <TouchableOpacity
-                        style={{
-                          backgroundColor: t.glassButtonBg,
-                          borderColor: t.glassButtonBorder,
-                          borderWidth: 1,
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 12,
-                        }}
-                        onPress={handlePreencherDadosDemo}
-                      >
-                        <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Preencher Teste Rápido</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
-                  <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor={t.textSecondary} />
-
-                  <View style={styles.row}>
-                    <View style={styles.halfInput}>
-                      <Text style={[styles.label, { color: t.textSecondary }]}>Idade</Text>
-                      <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={idade} onChangeText={setIdade} keyboardType="numeric" placeholder="24" placeholderTextColor={t.textSecondary} />
-                    </View>
-                    <View style={styles.halfInput}>
-                      <Text style={[styles.label, { color: t.textSecondary }]}>Peso (kg)</Text>
-                      <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={peso} onChangeText={setPeso} keyboardType="numeric" placeholder="78" placeholderTextColor={t.textSecondary} />
-                    </View>
-                  </View>
-
-                  <View style={styles.row}>
-                    <View style={styles.halfInput}>
-                      <Text style={[styles.label, { color: t.textSecondary }]}>Altura (cm)</Text>
-                      <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={altura} onChangeText={setAltura} keyboardType="numeric" placeholder="178" placeholderTextColor={t.textSecondary} />
-                    </View>
-                    <View style={styles.halfInput}>
-                      <Text style={[styles.label, { color: t.textSecondary }]}>Dias p/ semana</Text>
-                      <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={dias} onChangeText={setDias} keyboardType="numeric" placeholder="4" placeholderTextColor={t.textSecondary} />
-                    </View>
-                  </View>
-
-                  {/* SELEÇÃO DO OBJETIVO */}
-                  <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Objetivo Principal:</Text>
-                  <View style={styles.chipContainer}>
-                    {listaObjetivos.map((item) => (
-                      <TouchableOpacity
-                        key={item}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor: objetivo === item ? t.glassButtonBg : t.inputBg,
-                            borderColor: objetivo === item ? t.glassButtonBorder : t.cardBorder,
-                          },
-                        ]}
-                        onPress={() => setObjetivo(item)}
-                      >
-                        <Text style={[styles.chipText, { color: objetivo === item ? t.glassButtonText : t.textSecondary }]}>{item}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* SELEÇÃO DO NÍVEL / TEMPO DE TREINO */}
-                  <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Nível / Tempo de Treino:</Text>
-                  <View style={styles.chipContainer}>
-                    {listaNiveis.map((item) => (
-                      <TouchableOpacity
-                        key={item}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor: nivel === item ? t.glassButtonBg : t.inputBg,
-                            borderColor: nivel === item ? t.glassButtonBorder : t.cardBorder,
-                          },
-                        ]}
-                        onPress={() => setNivel(item)}
-                      >
-                        <Text style={[styles.chipText, { color: nivel === item ? t.glassButtonText : t.textSecondary }]}>{item}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* OBSERVAÇÕES E PEDIDOS DE AJUSTE */}
-                  <Text style={[styles.label, { marginTop: 12, color: t.textSecondary }]}>Observações / Preferências</Text>
-                  <TextInput
-                    style={[styles.input, styles.multilineInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
-                    value={observacoes}
-                    onChangeText={setObservacoes}
-                    multiline
-                    numberOfLines={3}
-                    placeholder="Ex: Quero focar mais em glúteos e ombros. Não quero exercícios de braço na sexta-feira."
-                    placeholderTextColor={t.textSecondary}
-                  />
-
-                  {/* REGRA DO NUTRICIONISTA */}
-                  <Text style={[styles.label, { marginTop: 15, color: t.textSecondary }]}>Você já passou por consulta com nutricionista?</Text>
-                  <View style={styles.rowButtons}>
-                    <TouchableOpacity
-                      style={[
-                        styles.toggleBtn,
-                        {
-                          backgroundColor: passouNutricionista === true ? t.glassButtonBg : t.inputBg,
-                          borderColor: passouNutricionista === true ? t.glassButtonBorder : t.cardBorder,
-                        },
-                      ]}
-                      onPress={() => setPassouNutricionista(true)}
-                    >
-                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === true ? t.glassButtonText : t.textPrimary }]}>Sim, já fui</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.toggleBtn,
-                        {
-                          backgroundColor: passouNutricionista === false ? t.glassButtonBg : t.inputBg,
-                          borderColor: passouNutricionista === false ? t.glassButtonBorder : t.cardBorder,
-                        },
-                      ]}
-                      onPress={() => setPassouNutricionista(false)}
-                    >
-                      <Text style={[styles.toggleBtnText, { color: passouNutricionista === false ? t.glassButtonText : t.textPrimary }]}>Não, nunca fui</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {passouNutricionista === true && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={[styles.label, { color: t.textSecondary }]}>Digite seu % de Gordura (BF) do nutricionista:</Text>
-                      <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={bfInformado} onChangeText={setBfInformado} keyboardType="numeric" placeholder="Ex: 15" placeholderTextColor={t.textSecondary} />
-                    </View>
-                  )}
-
-                  {passouNutricionista === false && (
-                    <Text style={[styles.infoText, { color: t.accentCyan }]}>
-                      A IA do Gemini utilizará visão computacional nas suas fotos para estimar o seu % de gordura corporal.
-                    </Text>
-                  )}
-
-                  {/* UPLOAD DE FOTOS */}
-                  <Text style={[styles.cardTitle, { marginTop: 25, color: t.textPrimary }]}>Fotos Corporais</Text>
-
-                  <View style={styles.photoContainer}>
-                    {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
-                      <TouchableOpacity key={tipo} style={[styles.photoBox, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]} onPress={() => selecionarFoto(tipo)}>
-                        {fotos[tipo] ? (
-                          <Image source={{ uri: fotos[tipo]?.uri }} style={styles.photoPreview} />
-                        ) : (
-                          <Text style={[styles.photoBoxText, { color: t.textSecondary }]}>+ Foto {tipo.toUpperCase()}</Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      {
-                        backgroundColor: t.glassButtonBg,
-                        borderColor: t.glassButtonBorder,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={handleSubmeterAnamnese}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Analisar com IA Multimodal</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* FASE 2: VALIDAÇÃO DO DIAGNÓSTICO DA IA */}
-              {faseAtual === 2 && resultadoAvaliacao && (
-                <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <Text style={[styles.cardTitle, { color: t.textPrimary }]}>Diagnóstico Visual da IA</Text>
-
-                  <View style={[styles.highlightBadge, { backgroundColor: t.glassButtonBg, borderColor: t.glassButtonBorder, borderWidth: 1 }]}>
-                    <Text style={[styles.highlightText, { color: t.glassButtonText }]}>BF Estimado: {resultadoAvaliacao.avaliacao.bf_estimado}</Text>
-                  </View>
-
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Pontos Fortes:</Text>
-                  {resultadoAvaliacao.avaliacao.pontos_fortes.map((pf, idx) => (
-                    <Text key={idx} style={[styles.listItem, { color: t.textPrimary }]}>• {pf}</Text>
-                  ))}
-
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Pontos Fracos (Prioridade de Treino):</Text>
-                  {resultadoAvaliacao.avaliacao.pontos_fracos.map((pf, idx) => (
-                    <Text key={idx} style={[styles.listItem, { color: t.textPrimary }]}>• {pf}</Text>
-                  ))}
-
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Observações Posturais:</Text>
-                  <Text style={[styles.bodyText, { color: t.textSecondary }]}>{resultadoAvaliacao.avaliacao.postura_observacoes}</Text>
-
-                  <Text style={[styles.sectionHeader, { color: t.accentGreen }]}>Mensagem da IA:</Text>
-                  <Text style={[styles.bodyText, { color: t.textSecondary }]}>{resultadoAvaliacao.avaliacao.mensagem_validacao}</Text>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      {
-                        backgroundColor: t.glassButtonBg,
-                        borderColor: t.glassButtonBorder,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={handleConfirmarEGerarTreino}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText }]}>Concordo 100% / Gerar Treino</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* FASE 3: FICHA DE TREINO PRESCRITA */}
-              {faseAtual === 3 && resultadoTreino && (
-                <View style={[styles.cardCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <Text style={[styles.cardTitle, { color: t.textPrimary, marginBottom: 0 }]}>Ficha de Treino Prescrita</Text>
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: t.glassButtonBg,
-                        borderColor: t.glassButtonBorder,
-                        borderWidth: 1,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 12,
-                      }}
-                      onPress={() => exportarFichaTreinoPDF(resultadoTreino, nome || session?.user?.email)}
-                    >
-                      <Text style={{ color: t.glassButtonText, fontSize: 12, fontWeight: 'bold' }}>Exportar PDF</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
-                    Divisão: {resultadoTreino.treino.divisao_nome} | {resultadoTreino.treino.frequencia_semanal}x por semana
-                  </Text>
-
-                  {/* BOTAO PRINCIPAL DE DEFINIR COMO TREINO ATIVO */}
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryButton,
-                      {
-                        backgroundColor: t.glassButtonBg,
-                        borderColor: t.glassButtonBorder,
-                        borderWidth: 1.5,
-                        marginVertical: 12,
-                      },
-                    ]}
-                    onPress={handleDefinirTreinoAtivo}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: t.glassButtonText, fontSize: 16 }]}>
-                      Definir como Meu Treino Ativo
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* NAVEGAÇÃO DE DIAS DE TREINO (TREINO A, TREINO B, TREINO C...) */}
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 14 }}>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {resultadoTreino.treino.sessoes.map((s, idx) => {
-                        const isSelected = sessaoAtivaIndex === idx;
-
-                        return (
-                          <TouchableOpacity
-                            key={idx}
-                            style={[
-                              styles.dayChip,
-                              {
-                                backgroundColor: isSelected ? t.glassButtonBg : t.inputBg,
-                                borderColor: isSelected ? t.glassButtonBorder : t.cardBorder,
-                              },
-                            ]}
-                            onPress={() => setSessaoAtivaIndex(idx)}
-                          >
-                            <Text
-                              style={[
-                                styles.dayChipText,
-                                { color: isSelected ? t.glassButtonText : t.textSecondary },
-                              ]}
-                            >
-                              Dia {idx + 1}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </ScrollView>
-
-                  {/* SESSÃO ATIVA */}
-                  {resultadoTreino.treino.sessoes[sessaoAtivaIndex] && (
-                    <View style={[styles.sessionCard, { backgroundColor: t.inputBg, borderColor: t.cardBorder }]}>
-                      <Text style={[styles.sessionTitle, { color: t.accentGreen }]}>
-                        Dia {sessaoAtivaIndex + 1} - {String(resultadoTreino.treino.sessoes[sessaoAtivaIndex].nome || '').replace(/^Treino [A-Z]\s*-\s*/i, '')}
-                      </Text>
-
-                      {resultadoTreino.treino.sessoes[sessaoAtivaIndex].exercicios.map((ex, eIdx) => (
-                        <View key={eIdx} style={[styles.exerciseCapsule, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                          <View style={styles.exerciseHeader}>
-                            <Text style={[styles.exerciseName, { color: t.textPrimary }]}>{eIdx + 1}. {ex.nome}</Text>
-                            <TouchableOpacity
-                              style={[
-                                styles.replaceBtn,
-                                {
-                                  backgroundColor: t.glassButtonBg,
-                                  borderColor: t.glassButtonBorder,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                              onPress={() => handleAbrirModalSubstituicao(sessaoAtivaIndex, eIdx, ex)}
-                            >
-                              <Text style={[styles.replaceBtnText, { color: t.glassButtonText }]}>Substituir</Text>
-                            </TouchableOpacity>
-                          </View>
-
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                            <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Séries: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.series_trabalho}</Text></Text>
-                            </View>
-                            <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>Reps: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.reps}</Text></Text>
-                            </View>
-                            <View style={[styles.metricPill, { backgroundColor: t.inputBg }]}>
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>RIR: <Text style={{ color: t.textPrimary, fontWeight: 'bold' }}>{ex.rir_alvo}</Text></Text>
-                            </View>
-                            <TouchableOpacity
-                              style={[
-                                styles.metricPill,
-                                {
-                                  backgroundColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBg : t.inputBg,
-                                  borderColor: (descansoAtivo && exercicioDescansoAtivo === ex.nome) ? t.glassButtonBorder : t.cardBorder,
-                                  borderWidth: 1,
-                                },
-                              ]}
-                              onPress={() => handleIniciarDescansoExercicio(ex.nome, ex.descanso_segundos || 60)}
-                            >
-                              <Text style={[styles.metricPillText, { color: t.textSecondary }]}>
-                                Descanso: <Text style={{ color: t.accentCyan, fontWeight: 'bold' }}>{ex.descanso_segundos}s</Text>
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                          <Text style={[styles.exerciseCadence, { color: t.textSecondary }]}>Cadência: {ex.foco_biomecanico}</Text>
-
-                          {/* BARRA DO TIMER DE DESCANSO INTEGRADO DO EXERCÍCIO */}
-                          {descansoAtivo && exercicioDescansoAtivo === ex.nome && (
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                                marginTop: 10,
-                                backgroundColor: 'rgba(2, 132, 199, 0.15)',
-                                borderColor: 'rgba(2, 132, 199, 0.50)',
-                                borderWidth: 1,
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                borderRadius: 12,
-                              }}
-                            >
-                              <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.accentCyan, flex: 1 }}>
-                                Descansando: {formatarTempo(descansoSegundosRestantes)}
-                              </Text>
-                              <TouchableOpacity
-                                style={{
-                                  backgroundColor: t.inputBg,
-                                  borderColor: t.cardBorder,
-                                  borderWidth: 1,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 4,
-                                  borderRadius: 8,
-                                }}
-                                onPress={handlePausarDescanso}
-                              >
-                                <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Pausar</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={{
-                                  backgroundColor: t.inputBg,
-                                  borderColor: t.cardBorder,
-                                  borderWidth: 1,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 4,
-                                  borderRadius: 8,
-                                }}
-                                onPress={handleResetarDescanso}
-                              >
-                                <Text style={{ fontSize: 11, color: t.textSecondary, fontWeight: 'bold' }}>Resetar</Text>
-                              </TouchableOpacity>
-                            </View>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#475569' }]} onPress={() => setFaseAtual(1)}>
-                    <Text style={styles.primaryButtonText}>Fazer Nova Anamnese</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </ScrollView>
-          )}
-        </>
-      )}
-
-      {/* MENU LATERAL SLIDE DRAWER MODAL */}
-      <Modal visible={menuLateralVisivel} transparent animationType="fade">
-        <TouchableOpacity
-          style={{ flex: 1, backgroundColor: t.overlayBg, flexDirection: 'row' }}
-          activeOpacity={1}
-          onPress={() => setMenuLateralVisivel(false)}
-        >
+        {/* MENU LATERAL SLIDE DRAWER MODAL FRUTIGER AERO */}
+        <Modal visible={menuLateralVisivel} transparent animationType="fade">
           <TouchableOpacity
+            style={{ flex: 1, backgroundColor: t.overlayBg, flexDirection: 'row' }}
             activeOpacity={1}
-            style={{
-              width: '80%',
-              backgroundColor: t.drawerBg,
-              height: '100%',
-              padding: 22,
-              paddingTop: 50,
-              borderTopRightRadius: 28,
-              borderBottomRightRadius: 28,
-            }}
+            onPress={() => setMenuLateralVisivel(false)}
           >
-            <View style={{ marginBottom: 25 }}>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: t.textPrimary }}>
-                MyPersonal
+            <TouchableOpacity
+              activeOpacity={1}
+              style={{
+                width: '82%',
+                maxWidth: 340,
+                backgroundColor: t.drawerBg,
+                height: '100%',
+                padding: 22,
+                paddingTop: 50,
+                borderTopRightRadius: 32,
+                borderBottomRightRadius: 32,
+                borderRightWidth: 1.2,
+                borderRightColor: t.cardBorder,
+              }}
+            >
+              <View style={{ marginBottom: 22 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: t.accentAqua }}>My</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: t.accentLime }}>Personal</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: t.textSecondary, marginTop: 4 }}>
+                  {nome || session?.user?.email}
+                </Text>
+              </View>
+
+              {/* SEÇÃO ALTERNADOR DE TEMA */}
+              <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.6 }}>
+                TEMA DO APLICATIVO
               </Text>
-              <Text style={{ fontSize: 13, color: t.textSecondary, marginTop: 10 }}>
-                {nome || session?.user?.email}
-              </Text>
-            </View>
 
-            {/* SEÇÃO ALTERNADOR DE TEMA */}
-            <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              TEMA DO APLICATIVO
-            </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 22 }}>
+                <AeroBubbleChip
+                  style={{ flex: 1 }}
+                  label="☀️ Modo Claro"
+                  active={temaAtual === 'light'}
+                  onPress={() => setTemaAtual('light')}
+                  theme={t}
+                />
+                <AeroBubbleChip
+                  style={{ flex: 1 }}
+                  label="🌙 Modo Escuro"
+                  active={temaAtual === 'dark'}
+                  onPress={() => setTemaAtual('dark')}
+                  theme={t}
+                />
+              </View>
 
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 25 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 16,
-                  backgroundColor: temaAtual === 'light' ? t.glassButtonBg : t.inputBg,
-                  borderColor: temaAtual === 'light' ? t.glassButtonBorder : t.inputBorder,
-                  borderWidth: 1,
-                  alignItems: 'center',
-                }}
-                onPress={() => setTemaAtual('light')}
-              >
-                <Text style={{ fontWeight: 'bold', color: temaAtual === 'light' ? t.glassButtonText : t.textSecondary }}>
-                  Modo Claro
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 16,
-                  backgroundColor: temaAtual === 'dark' ? t.glassButtonBg : t.inputBg,
-                  borderColor: temaAtual === 'dark' ? t.glassButtonBorder : t.inputBorder,
-                  borderWidth: 1,
-                  alignItems: 'center',
-                }}
-                onPress={() => setTemaAtual('dark')}
-              >
-                <Text style={{ fontWeight: 'bold', color: temaAtual === 'dark' ? t.glassButtonText : t.textSecondary }}>
-                  Modo Escuro
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* SEÇÃO MODO DEV / TESTE RÁPIDO */}
-            {isDevUser && (
-              <>
-                <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-                  MODO DEV / ATALHOS DE TESTE
-                </Text>
-
-                <TouchableOpacity
-                  style={{
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 16,
-                    backgroundColor: t.glassButtonBg,
-                    borderColor: t.glassButtonBorder,
-                    borderWidth: 1,
-                    marginBottom: 20,
-                    alignItems: 'center',
-                  }}
-                  onPress={() => {
-                    handlePreencherDadosDemo();
-                    setAbaPrincipal('novo');
-                    setFaseAtual(1);
-                    setMenuLateralVisivel(false);
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: 'bold', color: t.glassButtonText }}>
-                    Preencher Teste Rápido
+              {/* SEÇÃO MODO DEV / TESTE RÁPIDO */}
+              {isDevUser && (
+                <>
+                  <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.6 }}>
+                    MODO DEV / ATALHOS DE TESTE
                   </Text>
-                </TouchableOpacity>
-              </>
-            )}
 
-            {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
-            <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.5 }}>
-              NAVEGAÇÃO PRINCIPAL
-            </Text>
+                  <AeroBubbleButton
+                    variant="glass"
+                    title="⚡ Preencher Teste Rápido"
+                    onPress={() => {
+                      handlePreencherDadosDemo();
+                      setAbaPrincipal('novo');
+                      setFaseAtual(1);
+                      setMenuLateralVisivel(false);
+                    }}
+                    theme={t}
+                    style={{ marginBottom: 20 }}
+                    textStyle={{ fontSize: 13 }}
+                  />
+                </>
+              )}
 
-            <TouchableOpacity
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 16,
-                backgroundColor: abaPrincipal === 'novo' ? t.glassButtonBg : t.inputBg,
-                borderColor: abaPrincipal === 'novo' ? t.glassButtonBorder : 'transparent',
-                borderWidth: 1,
-                marginBottom: 8,
-              }}
-              onPress={() => {
-                setAbaPrincipal('novo');
-                setMenuLateralVisivel(false);
-              }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'novo' ? t.glassButtonText : t.textPrimary }}>
-                Gerar Novo Treino
+              {/* SEÇÃO NAVEGAÇÃO PRINCIPAL */}
+              <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.textSecondary, marginBottom: 10, letterSpacing: 0.6 }}>
+                NAVEGAÇÃO PRINCIPAL
               </Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 16,
-                backgroundColor: abaPrincipal === 'historico' ? t.glassButtonBg : t.inputBg,
-                borderColor: abaPrincipal === 'historico' ? t.glassButtonBorder : 'transparent',
-                borderWidth: 1,
-                marginBottom: 8,
-              }}
-              onPress={() => {
-                setAbaPrincipal('historico');
-                setMenuLateralVisivel(false);
-              }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'historico' ? t.glassButtonText : t.textPrimary }}>
-                Meu Treino Ativo
-              </Text>
-            </TouchableOpacity>
+              <AeroBubbleButton
+                variant={abaPrincipal === 'novo' ? 'primary' : 'glass'}
+                title="✨ Gerar Novo Treino"
+                onPress={() => {
+                  setAbaPrincipal('novo');
+                  setMenuLateralVisivel(false);
+                }}
+                theme={t}
+                style={{ marginBottom: 10 }}
+                textStyle={{ fontSize: 13.5 }}
+              />
 
-            <TouchableOpacity
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 16,
-                backgroundColor: abaPrincipal === 'cronometro' ? t.glassButtonBg : t.inputBg,
-                borderColor: abaPrincipal === 'cronometro' ? t.glassButtonBorder : 'transparent',
-                borderWidth: 1,
-                marginBottom: 20,
-              }}
-              onPress={() => {
-                setAbaPrincipal('cronometro');
-                setMenuLateralVisivel(false);
-              }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: abaPrincipal === 'cronometro' ? t.glassButtonText : t.textPrimary }}>
-                Cronômetro De Treino
-              </Text>
-            </TouchableOpacity>
+              <AeroBubbleButton
+                variant={abaPrincipal === 'historico' ? 'primary' : 'glass'}
+                title="📋 Meu Treino Ativo"
+                onPress={() => {
+                  setAbaPrincipal('historico');
+                  setMenuLateralVisivel(false);
+                }}
+                theme={t}
+                style={{ marginBottom: 10 }}
+                textStyle={{ fontSize: 13.5 }}
+              />
 
-            <View style={{ flex: 1 }} />
+              <AeroBubbleButton
+                variant={abaPrincipal === 'revisao' ? 'primary' : 'glass'}
+                title="⭐ Revisão do Treino"
+                onPress={() => {
+                  setAbaPrincipal('revisao');
+                  setMenuLateralVisivel(false);
+                }}
+                theme={t}
+                style={{ marginBottom: 20 }}
+                textStyle={{ fontSize: 13.5 }}
+              />
 
-            <TouchableOpacity
-              style={{
-                paddingVertical: 14,
-                borderRadius: 16,
-                backgroundColor: '#ef4444',
-                alignItems: 'center',
-                marginBottom: 20,
-              }}
-              onPress={() => {
-                setMenuLateralVisivel(false);
-                handleLogout();
-              }}
-            >
-              <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 14 }}>
-                Sair da Conta
-              </Text>
+              <View style={{ flex: 1 }} />
+
+              <AeroBubbleButton
+                variant="danger"
+                title="Sair da Conta"
+                onPress={() => {
+                  setMenuLateralVisivel(false);
+                  handleLogout();
+                }}
+                theme={t}
+                style={{ marginBottom: 20 }}
+                textStyle={{ fontSize: 14 }}
+              />
             </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        </Modal>
 
-      {/* MODAL DE SUBSTITUIÇÃO DE EXERCÍCIO */}
-      <Modal visible={modalSubstituicaoVisivel} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
-          <View style={[styles.modalContainer, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Substituir Exercício</Text>
+        {/* MODAL DE SUBSTITUIÇÃO DE EXERCÍCIO FRUTIGER AERO */}
+        <Modal visible={modalSubstituicaoVisivel} transparent animationType="fade">
+          <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
+            <AeroGlassCard theme={t} style={{ maxWidth: 440, width: '92%', alignSelf: 'center', borderRadius: 28, padding: 22 }}>
+              <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Substituir Exercício</Text>
 
-            {exercicioParaSubstituir && (
-              <Text style={[styles.modalSubTitle, { color: t.textSecondary }]}>
-                Exercício Atual: <Text style={{ color: t.accentGreen, fontWeight: 'bold' }}>{exercicioParaSubstituir.dados.nome}</Text>
-              </Text>
-            )}
+              {exercicioParaSubstituir && (
+                <Text style={[styles.modalSubTitle, { color: t.textSecondary }]}>
+                  Exercício Atual: <Text style={{ color: t.accentLime, fontWeight: 'bold' }}>{exercicioParaSubstituir.dados.nome}</Text>
+                </Text>
+              )}
 
-            <Text style={[styles.label, { color: t.textSecondary }]}>Motivo da Troca (Opcional):</Text>
-            <TextInput
-              style={[styles.input, styles.multilineInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]}
-              value={motivoTroca}
-              onChangeText={setMotivoTroca}
-              multiline
-              numberOfLines={3}
-              placeholder="Ex: Não tenho essa máquina na academia / Sinto dor no ombro com este movimento"
-              placeholderTextColor={t.textSecondary}
-            />
+              <Text style={[styles.label, { color: t.textSecondary }]}>Motivo da Troca (Opcional):</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary, borderRadius: 16 }]}
+                value={motivoTroca}
+                onChangeText={setMotivoTroca}
+                multiline
+                numberOfLines={3}
+                placeholder="Ex: Não tenho essa máquina na academia / Sinto dor no ombro com este movimento"
+                placeholderTextColor={t.textSecondary}
+              />
 
-            {carregandoTroca ? (
-              <ActivityIndicator size="small" color={t.accentGreen} style={{ marginVertical: 10 }} />
-            ) : (
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalBtn, { backgroundColor: '#475569' }]}
-                  onPress={() => setModalSubstituicaoVisivel(false)}
-                >
-                  <Text style={styles.modalBtnText}>Cancelar</Text>
-                </TouchableOpacity>
+              {carregandoTroca ? (
+                <ActivityIndicator size="small" color={t.accentLime} style={{ marginVertical: 10 }} />
+              ) : (
+                <View style={styles.modalActions}>
+                  <AeroBubbleButton
+                    variant="secondary"
+                    title="Cancelar"
+                    onPress={() => setModalSubstituicaoVisivel(false)}
+                    theme={t}
+                    style={{ flex: 1 }}
+                  />
 
-                <TouchableOpacity
-                  style={[
-                    styles.modalBtn,
-                    {
-                      backgroundColor: t.glassButtonBg,
-                      borderColor: t.glassButtonBorder,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  onPress={handleExecutarSubstituicao}
-                >
-                  <Text style={[styles.modalBtnText, { color: t.glassButtonText }]}>Trocar Exercício</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  <AeroBubbleButton
+                    title="Trocar Exercício"
+                    onPress={handleExecutarSubstituicao}
+                    theme={t}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              )}
+            </AeroGlassCard>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* MODAL POP-UP VERMELHO DE ERRO (SAMSUNG ONE UI 8.5 LIQUID GLASS) */}
-      <Modal visible={alertaErroVisivel} transparent animationType="fade">
-        <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
-          <View
-            style={{
-              backgroundColor: temaAtual === 'dark' ? 'rgba(38, 12, 18, 0.92)' : 'rgba(254, 242, 242, 0.96)',
-              borderColor: '#ef4444',
-              borderWidth: 2,
-              borderRadius: 26,
-              padding: 24,
-              alignItems: 'center',
-              shadowColor: '#ef4444',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.35,
-              shadowRadius: 16,
-              elevation: 10,
-              maxWidth: 440,
-              alignSelf: 'center',
-              width: '90%',
-            }}
-          >
-            {/* BADGE TRANSLÚCIDA DE ALERTA LIQUID GLASS */}
-            <View
+        {/* MODAL POP-UP DE ALERTA FRUTIGER AERO LIQUID GLASS */}
+        <Modal visible={alertaErroVisivel} transparent animationType="fade">
+          <View style={[styles.modalOverlay, { backgroundColor: t.overlayBg }]}>
+            <AeroGlassCard
+              theme={t}
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.20)',
-                borderColor: 'rgba(239, 68, 68, 0.55)',
-                borderWidth: 1,
-                paddingHorizontal: 14,
-                paddingVertical: 5,
-                borderRadius: 12,
-                marginBottom: 12,
+                maxWidth: 420,
+                width: '90%',
+                alignSelf: 'center',
+                borderRadius: 28,
+                padding: 24,
+                alignItems: 'center',
+                borderColor: 'rgba(255, 77, 77, 0.55)',
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#ef4444', letterSpacing: 0.8 }}>
-                ATENÇÃO DE PREENCHIMENTO
+              {/* BADGE TRANSLÚCIDA DE ALERTA LIQUID GLASS */}
+              <AeroBadge label="ATENÇÃO DE PREENCHIMENTO" color="#ff4d4d" theme={t} style={{ marginBottom: 12 }} />
+
+              <Text style={{ fontSize: 19, fontWeight: 'bold', color: temaAtual === 'dark' ? '#ff6b6b' : '#dc2626', marginBottom: 10, textAlign: 'center' }}>
+                Dados Essenciais Incompletos
               </Text>
-            </View>
 
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: temaAtual === 'dark' ? '#ff6b6b' : '#dc2626', marginBottom: 10, textAlign: 'center' }}>
-              Dados Essenciais Incompletos
-            </Text>
-
-            <Text style={{ fontSize: 13.5, color: temaAtual === 'dark' ? '#cbd5e1' : '#475569', textAlign: 'center', lineHeight: 21, marginBottom: 22 }}>
-              {mensagemErroAlerta}
-            </Text>
-
-            {/* BOTÃO LIQUID GLASS RED */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.22)',
-                borderColor: 'rgba(239, 68, 68, 0.65)',
-                borderWidth: 1.5,
-                paddingVertical: 12,
-                paddingHorizontal: 40,
-                borderRadius: 16,
-              }}
-              onPress={() => setAlertaErroVisivel(false)}
-            >
-              <Text style={{ color: temaAtual === 'dark' ? '#ff6b6b' : '#dc2626', fontWeight: 'bold', fontSize: 14 }}>
-                Entendido
+              <Text style={{ fontSize: 13.5, color: temaAtual === 'dark' ? '#cbd5e1' : '#475569', textAlign: 'center', lineHeight: 21, marginBottom: 20 }}>
+                {mensagemErroAlerta}
               </Text>
-            </TouchableOpacity>
+
+              <AeroBubbleButton
+                variant="danger"
+                title="Entendido"
+                onPress={() => setAlertaErroVisivel(false)}
+                theme={t}
+                style={{ width: '85%' }}
+              />
+            </AeroGlassCard>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
-// ESTILOS VISUAIS E CÁPSULAS SAMSUNG ONE UI 8.5 LIQUID GLASS
+// ESTILOS VISUAIS E CÁPSULAS FRUTIGER AERO LIQUID GLASS
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 16, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  header: { padding: 16, borderBottomWidth: 1.2 },
+  headerTitle: { fontSize: 22, fontWeight: 'bold' },
   headerUserText: { fontSize: 13, fontWeight: '600' },
   headerSubtitle: { fontSize: 12, marginTop: 4 },
-  menuBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14 },
+  menuBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   menuBtnText: { fontSize: 13, fontWeight: 'bold' },
-  dayChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, borderWidth: 1 },
+  dayChip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, borderWidth: 1 },
   dayChipText: { fontSize: 13, fontWeight: 'bold' },
   scrollContent: { padding: 16 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12, fontSize: 14 },
-  authCard: { padding: 24, borderRadius: 24, borderWidth: 1 },
-  authLogo: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
+  authCard: { padding: 24, borderRadius: 28, borderWidth: 1.2 },
+  authLogo: { fontSize: 30, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
   authSubtitle: { fontSize: 13, textAlign: 'center', marginBottom: 20 },
-  authTabContainer: { flexDirection: 'row', borderRadius: 16, padding: 4, marginBottom: 20 },
-  authTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 12 },
+  authTabContainer: { flexDirection: 'row', borderRadius: 18, padding: 4, marginBottom: 20 },
+  authTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 14 },
   authTabText: { fontSize: 14, fontWeight: 'bold' },
-  cardCapsule: { padding: 20, borderRadius: 24, borderWidth: 1 },
+  cardCapsule: { padding: 20, borderRadius: 26, borderWidth: 1.2 },
   cardTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  input: { borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 12 },
+  input: { borderWidth: 1.2, borderRadius: 16, padding: 12, marginBottom: 12 },
   multilineInput: { minHeight: 70, textAlignVertical: 'top' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfInput: { width: '48%' },
   chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22, borderWidth: 1 },
   chipText: { fontSize: 12, fontWeight: 'bold' },
   rowButtons: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  toggleBtn: { flex: 1, padding: 12, borderRadius: 14, borderWidth: 1, alignItems: 'center' },
+  toggleBtn: { flex: 1, padding: 12, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
   toggleBtnText: { fontSize: 13, fontWeight: 'bold' },
   infoText: { fontSize: 12, marginBottom: 12, fontStyle: 'italic' },
   photoContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  photoBox: { width: '31%', height: 90, borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  photoBox: { width: '31%', height: 92, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   photoBoxText: { fontSize: 11, textAlign: 'center' },
-  photoPreview: { width: '100%', height: '100%', borderRadius: 16 },
-  primaryButton: { padding: 16, borderRadius: 18, alignItems: 'center', marginTop: 15 },
+  photoPreview: { width: '100%', height: '100%', borderRadius: 20 },
+  primaryButton: { padding: 16, borderRadius: 22, alignItems: 'center', marginTop: 15 },
   primaryButtonText: { fontWeight: 'bold', fontSize: 15 },
-  highlightBadge: { padding: 12, borderRadius: 16, marginBottom: 15, alignItems: 'center' },
+  highlightBadge: { padding: 14, borderRadius: 20, marginBottom: 15, alignItems: 'center' },
   highlightText: { fontWeight: 'bold', fontSize: 16 },
   sectionHeader: { fontWeight: 'bold', marginTop: 12, marginBottom: 4 },
   listItem: { fontSize: 14, marginLeft: 6, marginBottom: 2 },
   bodyText: { fontSize: 13, lineHeight: 18 },
-  sessionCard: { padding: 16, borderRadius: 20, marginTop: 10, borderWidth: 1 },
+  sessionCard: { padding: 16, borderRadius: 22, marginTop: 10, borderWidth: 1.2 },
   sessionTitle: { fontWeight: 'bold', fontSize: 16, marginBottom: 12 },
-  exerciseCapsule: { padding: 14, borderRadius: 18, marginBottom: 10, borderWidth: 1 },
+  exerciseCapsule: { padding: 14, borderRadius: 20, marginBottom: 10, borderWidth: 1.2 },
   exerciseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   exerciseName: { fontWeight: 'bold', fontSize: 15, flex: 1 },
-  replaceBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  replaceBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14 },
   replaceBtnText: { fontSize: 12, fontWeight: 'bold' },
-  metricPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  metricPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14 },
   metricPillText: { fontSize: 11 },
   exerciseCadence: { fontSize: 11, marginTop: 8, fontStyle: 'italic' },
   modalOverlay: { flex: 1, justifyContent: 'center', padding: 20 },
-  modalContainer: { padding: 20, borderRadius: 22, borderWidth: 1 },
+  modalContainer: { padding: 20, borderRadius: 26, borderWidth: 1.2 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   modalSubTitle: { fontSize: 14, marginBottom: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 15 },
-  modalBtn: { flex: 1, padding: 12, borderRadius: 14, alignItems: 'center' },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 16, alignItems: 'center' },
   modalBtnText: { fontWeight: 'bold', fontSize: 14 },
 });
