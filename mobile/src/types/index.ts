@@ -1,8 +1,25 @@
+export type SexoBiologico = 'masculino' | 'feminino';
+
+export interface MetricaAntropometrica {
+  imc: number;
+  classificacao_imc: string;
+  bf_deurenberg_referencia: number;
+  densidade_muscular?: string;
+}
+
+export interface MarcadoresVisuais {
+  abdome_e_tronco?: string;
+  ombros_e_bracos?: string;
+  flancos_e_cintura?: string;
+  vascularizacao?: string;
+}
+
 export interface AnamneseFormData {
   nome: string;
   idade: number;
   peso: number;
   altura: number;
+  sexo?: SexoBiologico;
   objetivo: string;
   nivel_experiencia: string;
   dias_disponiveis: number;
@@ -26,6 +43,9 @@ export interface AvaliacaoFisica {
   fase: 'AVALIACAO';
   avaliacao: {
     bf_estimado: string;
+    classificacao_bf?: string;
+    metrica_antropometrica?: MetricaAntropometrica;
+    marcadores_visuais?: MarcadoresVisuais;
     pontos_fortes: string[];
     pontos_fracos: string[];
     postura_observacoes: string;

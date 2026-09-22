@@ -58,29 +58,43 @@ O aluno deve obrigatoriamente selecionar uma das modalidades:
 
 ---
 
-## 4. 🩺 Regra de Ouro do Nutricionista & Estimativa de % de Gordura (BF)
+## 4. 🩺 Regra de Ouro do Nutricionista & Estimativa de % de Gordura (BF) em 3 Camadas
 
-1. **Caso o aluno JÁ TENHA passado por nutricionista (`passou_nutricionista = true`)**:
-   - O aplicativo libera um campo para digitar o % de gordura (BF) oficial medido pelo profissional.
-   - A IA é **obrigada** a utilizar este valor exato no relatório de avaliação, sem alterá-lo.
-   - As fotos corporais são analisadas exclusivamente para identificar assimetrias, pontos fortes/fracos e desvios posturais.
+O sistema aplica um protocolo de avaliação antropométrica e visual de alta precisão estruturado em 3 camadas:
 
-2. **Caso o aluno NUNCA TENHA ido ao nutricionista (`passou_nutricionista = false`)**:
-   - O aplicativo solicita consentimento explícito (`autoriza_estimativa_bf = true`).
-   - A IA aplica **Visão Computacional Multimodal** nas fotos de **Frente**, **Costas** e **Perfil** para estimar uma faixa realista de BF (ex: `"14-17%"`).
+1. **Camada 1 — Regra de Ouro do Nutricionista (Prevalência Clínica)**:
+   - Caso o aluno JÁ TENHA passado por nutricionista (`passou_nutricionista = true`):
+     - O aplicativo libera o campo para digitar o % de gordura (BF) oficial.
+     - A IA é **estritamente obrigada** a utilizar este valor exato em `bf_estimado`, sem alterá-lo.
+     - As fotos corporais são analisadas para identificar assimetrias, tônus, pontos fortes/fracos e desvios posturais.
+
+2. **Camada 2 — Ancoragem Biomecânica Matemática (Fórmulas Antropométricas)**:
+   - O backend (`AntropometriaService`) calcula previamente:
+     - **IMC** e classificação segundo a OMS.
+     - **Fórmula de Deurenberg**: `%BF = (1.20 × IMC) + (0.23 × Idade) - (10.8 × Sexo) - 5.4` (considerando sexo biológico: 1 masculino, 0 feminino).
+     - **Fórmula de Gallagher**: `%BF = (1.46 × IMC) + (0.14 × Idade) - (11.6 × Sexo) - 10.0`.
+     - **Calibração de Biotipo Muscular**: Praticantes de musculação intermediários/avançados possuem IMC elevado devido a massa muscular magra, não obesidade. O sistema calcula a janela biológica real esperada.
+
+3. **Camada 3 — Rubrica Anatômica Visual Multimodal (IA Multimodal 9Router)**:
+   - Caso o aluno NÃO tenha passado por nutricionista (`passou_nutricionista = false`), a IA analisa 4 quadrantes anatômicos objetivos nas fotos:
+     - **Tronco e Abdômen**: Linha alba, definição de gomos do reto abdominal (em repouso vs contração), serrátil anterior e oblíquos externos.
+     - **Cintura Escapular e Braços**: Separação deltoide/bíceps, densidade do peitoral e vascularização periférica.
+     - **Flancos e Costas**: Acúmulo de gordura sobre as cristas ilíacas e proporção em V (V-taper).
+     - **Conclusão Calibrada**: Cruze das evidências visuais com a âncora biométrica, gerando `bf_estimado`, `classificacao_bf`, `metrica_antropometrica` e resumo dos `marcadores_visuais`.
 
 ---
 
 ## 5. 📊 Fase 2: Diagnóstico Visual & Validação Humana
 
-Antes de receber o treino, o aluno deve visualizar e aprovar o diagnóstico gerado pela IA:
-- **BF Estimado ou Informado**
-- **Pontos Fortes**: Grupos musculares bem desenvolvidos.
-- **Pontos Fracos**: Grupos musculares prioritários que necessitam de maior volume de treino.
-- **Análise Postural**: Observações sobre alinhamento de ombros, escápulas e coluna.
-- **Mensagem Encorajadora do Personal**.
+Antes de receber o treino, o aluno visualiza e valida o diagnóstico completo gerado:
+- **BF Estimado ou Oficial** + **Classificação do Físico** (ex: *Atlético / Definido*).
+- **Âncoras Antropométricas & Biotipo**: IMC calculado, BF de referência Deurenberg e densidade muscular observada.
+- **Marcadores Anatômicos Visuais**: Descrição da leitura da IA no abdômen, ombros/braços, flancos e vascularização.
+- **Pontos Fortes Musculares**: Grupos musculares bem desenvolvidos.
+- **Prioridades Biomecânicas (Pontos Fracos)**: Grupos que receberão maior volume de séries.
+- **Observações Posturais & Mensagem do Especialista**.
 
-Ao clicar em **"Concordo 100% / Gerar Treino ⚡"**, a Fase 3 é desbloqueada.
+Ao clicar em **"Concordo 100% • Prescrever Treino ⚡"**, a Fase 3 é desbloqueada.
 
 ---
 

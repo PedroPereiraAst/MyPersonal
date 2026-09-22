@@ -5,7 +5,10 @@ import type {
   ExercicioItem,
   AnamneseInput,
   ImagemInput,
+  MetricaAntropometrica,
+  MarcadoresVisuais,
 } from '../types/schemas.js';
+import { AntropometriaService } from './antropometria.service.js';
 
 export interface NineRouterMessage {
   role: 'system' | 'user' | 'assistant';
@@ -112,50 +115,104 @@ export class NineRouterService {
   }
 
   /**
-   * FASE 1: Avaliação Física via 9Router (Multimodal Vision)
+   * FASE 1: Avaliação Física via 9Router (Multimodal Vision & Antropometria de Alta Precisão)
    */
   public static async analisarAvaliacaoFisica(
     anamnese: AnamneseInput,
     fotos: ImagemInput[]
   ): Promise<AvaliacaoFisica> {
+    const diag = AntropometriaService.diagnosticar({
+      pesoKg: anamnese.peso,
+      alturaCm: anamnese.altura,
+      idade: anamnese.idade,
+      sexo: anamnese.sexo,
+      nivelExperiencia: anamnese.nivel_experiencia,
+      objetivo: anamnese.objetivo,
+    });
+
     let instrucaoNutricionista = '';
     if (anamnese.passou_nutricionista && anamnese.bf_informado) {
-      instrucaoNutricionista = `O aluno JÁ PASSOU por nutricionista e informou seu % de gordura oficial (${anamnese.bf_informado}%). UTILIZE O VALOR DE ${anamnese.bf_informado}% EM 'bf_estimado'.`;
+      instrucaoNutricionista = `REGRA DE PREVALÊNCIA CLÍNICA OBRIGATÓRIA: O aluno JÁ PASSOU por nutricionista e informou seu percentual de gordura oficial (${anamnese.bf_informado}%). Você DEVE utilizar EXATAMENTE o valor de "${anamnese.bf_informado}%" em 'bf_estimado'. Utilize as fotos corporais para avaliar minuciosamente o tônus, os marcadores musculares, os pontos fortes/fracos e os desvios posturais.`;
     } else {
-      instrucaoNutricionista = `O aluno NÃO passou por nutricionista. UTILIZE A SUA CAPACIDADE DE VISÃO COMPUTACIONAL NAS FOTOS CORPORAIS ENVIADAS para estimar o % de gordura corporal (% BF).`;
+      instrucaoNutricionista = `O aluno NÃO passou por nutricionista recentemente. Você DEVE realizar uma análise antropométrica e visual de ALTA PRECISÃO cruzando as âncoras biológicas calculadas com os marcadores anatômicos visíveis nas fotografias corporais para estimar com exatidão o % de gordura corporal (% BF).`;
     }
 
     const promptText = `
-Você é um Personal Trainer especialista de alto nível, perito em avaliação física, biomecânica e composição corporal.
-Analise a anamnese e as fotos corporais do aluno para gerar um diagnóstico completo.
+Você é um Personal Trainer especialista de alto nível, PhD em biomecânica, cinesiologia e antropometria esportiva.
+Sua missão é realizar uma avaliação física rigorosa e altamente precisa da composição corporal do aluno, estimando seu percentual de gordura (% BF) e seu perfil musculoesquelético.
 
-Dados do Aluno:
+════════════════════════════════════════════════════════════════
+1. DADOS BIOMÉTRICOS & ÂNCORAS ANTROPOMÉTRICAS PRÉ-CALCULADAS
+════════════════════════════════════════════════════════════════
 - Nome: ${anamnese.nome}
+- Sexo Biológico: ${(anamnese.sexo || 'masculino').toUpperCase()}
 - Idade: ${anamnese.idade} anos | Peso: ${anamnese.peso} kg | Altura: ${anamnese.altura} cm
+- IMC: ${diag.imc} kg/m² (${diag.classificacao_imc})
+- BF Referência Populacional (Deurenberg): ${diag.bf_deurenberg}% | Gallagher: ${diag.bf_gallagher}%
+- Janela Biológica Esperada: ${diag.faixa_sugerida_min}% a ${diag.faixa_sugerida_max}%
+- Nível de Treino: ${anamnese.nivel_experiencia} | Frequência Semanal: ${anamnese.dias_disponiveis} dias
 - Objetivo Principal: ${anamnese.objetivo}
-- Nível de Experiência: ${anamnese.nivel_experiencia}
-- Frequência Semanal: ${anamnese.dias_disponiveis} dias
 - Limitações/Lesões: ${anamnese.limitacoes_lesoes || 'Nenhuma'}
 - Observações e Pedidos do Aluno: ${anamnese.observacoes_usuario || 'Nenhum'}
 
 ${instrucaoNutricionista}
 
-Instruções para o Diagnóstico:
-1. Determine a faixa de BF estimada ou utilize a informada pelo nutricionista.
-2. Identifique os Pontos Fortes do físico (grupos musculares bem desenvolvidos).
-3. Identifique os Pontos Fracos do físico (grupos musculares que necessitam de maior volume de treino para simetria).
-4. Avalie a postura visualmente (ex: rotação de ombros, inclinação pélvica ou simetria geral).
-5. Forneça uma mensagem encorajadora e motivadora ao aluno explicando os achados.
+${diag.aviso_atleta_musculoso ? `⚠️ ATENÇÃO BIOMECÂNICA DE BIOTIPO: O aluno possui IMC elevado associado a tempo de treino intermediário/avançado. Esse valor de IMC NÃO REPRESENTA OBESIDADE SEDENTÁRIA, mas sim hipertrofia e alta densidade muscular. Avalie a espessura da pele e a separação dos ventres musculares nas fotos para calibrar o BF para a faixa atlética real.` : ''}
 
+════════════════════════════════════════════════════════════════
+2. PROTOCOLO DE RUBRICA ANATÔMICA OBRIGATÓRIA (3 CAMADAS)
+════════════════════════════════════════════════════════════════
+Examine rigorosamente as fotos enviadas (Frente, Costas, Perfil) nos seguintes quadrantes anatômicos:
+
+[Quadrante A - Tronco e Parede Abdominal]
+- Linha alba (sulco mediano vertical): visível ou oculta sob tecido adiposo subcutâneo?
+- Reto abdominal (gomos):
+  * < 11% (Masc) / < 18% (Fem): 6 a 8 gomos recortados e profundos mesmo em repouso.
+  * 12% a 14% (Masc) / 19% a 21% (Fem): 4 gomos superiores bem nítidos; linha alba clara; abdômen plano.
+  * 15% a 18% (Masc) / 22% a 25% (Fem): Abdômen plano/reto sem divisões profundas; contorno atlético saudável.
+  * 19% a 24% (Masc) / 26% a 30% (Fem): Curvatura convexa leve/moderada, sem divisão visível de gomos.
+  * > 25% (Masc) / > 31% (Fem): Parede abdominal protuberante, dobras teciduais aparentes.
+- Serrátil anterior e oblíquos externos visíveis nas laterais das costelas?
+
+[Quadrante B - Cintura Escapular, Peitoral e Membros Superiores]
+- Separação entre Deltoide (ombro) e Bíceps/Tríceps visível (sulco deltóideo)?
+- Peitoral: formato desenhado, firmeza e densidade do feixe clavicular e esternal.
+- Vascularização superficial aparente nos antebraços, bíceps ou abdômen inferior?
+
+[Quadrante C - Flancos, Cintura e Costas]
+- Crista Ilíaca e Flancos: presença de gordura localizada lateral ("pneus" / dobras na linha da cintura)?
+- V-Taper (Razão Ombro/Cintura): formato do tronco em "V" com dorsais abertas ou linha de cintura larga?
+- Alinhamento da coluna e postura escapular (retificação, escápula alada, elevação ou rotação interna de ombros).
+
+[Quadrante D - Conclusão do BF]
+- Cruze as evidências visuais dos quadrantes com o sexo biológico e as âncoras biométricas calculadas.
+- Defina a faixa de % BF com precisão de 2 a 3 pontos percentuais (ex: "11-13%", "13-15%", "17-19%").
+
+════════════════════════════════════════════════════════════════
+3. FORMATO DE SAÍDA EXCLUSIVAMENTE EM JSON
+════════════════════════════════════════════════════════════════
 Responda ESTRITAMENTE em formato JSON com o seguinte schema:
 {
   "fase": "AVALIACAO",
   "avaliacao": {
-    "bf_estimado": "ex: 14-16%",
+    "bf_estimado": "ex: 12-14%",
+    "classificacao_bf": "ex: Atlético / Definido",
+    "metrica_antropometrica": {
+      "imc": ${diag.imc},
+      "classificacao_imc": "${diag.classificacao_imc}",
+      "bf_deurenberg_referencia": ${diag.bf_deurenberg},
+      "densidade_muscular": "Baixa | Média | Alta | Muito Alta"
+    },
+    "marcadores_visuais": {
+      "abdome_e_tronco": "descrição concisa da visualização da linha alba, gomos e serrátil",
+      "ombros_e_bracos": "descrição da separação deltoide, bíceps e densidade superior",
+      "flancos_e_cintura": "descrição dos flancos, crista ilíaca e V-taper",
+      "vascularizacao": "descrição de vascularização aparente (nenhuma, leve, evidente)"
+    },
     "pontos_fortes": ["grupo1", "grupo2"],
     "pontos_fracos": ["grupo1", "grupo2"],
-    "postura_observacoes": "análise postural detalhada",
-    "mensagem_validacao": "mensagem encorajadora e explicação dos achados"
+    "postura_observacoes": "análise biomecânica da postura observada nas fotos",
+    "mensagem_validacao": "mensagem encorajadora e explicativa detalhando os achados anatômicos para o aluno"
   }
 }
 `;
@@ -194,10 +251,38 @@ Responda ESTRITAMENTE em formato JSON com o seguinte schema:
       throw new Error('JSON retornado pelo 9Router não contém o formato esperado de AvaliacaoFisica.');
     }
 
+    const bfEstimado = String(result.avaliacao.bf_estimado);
+    const classificacaoBf = String(
+      result.avaliacao.classificacao_bf || AntropometriaService.classificarBF(bfEstimado, anamnese.sexo)
+    );
+
+    const metricaAntropometrica: MetricaAntropometrica = {
+      imc: typeof result.avaliacao.metrica_antropometrica?.imc === 'number'
+        ? result.avaliacao.metrica_antropometrica.imc
+        : diag.imc,
+      classificacao_imc: String(result.avaliacao.metrica_antropometrica?.classificacao_imc || diag.classificacao_imc),
+      bf_deurenberg_referencia: typeof result.avaliacao.metrica_antropometrica?.bf_deurenberg_referencia === 'number'
+        ? result.avaliacao.metrica_antropometrica.bf_deurenberg_referencia
+        : diag.bf_deurenberg,
+      densidade_muscular: String(
+        result.avaliacao.metrica_antropometrica?.densidade_muscular || (diag.aviso_atleta_musculoso ? 'Alta' : 'Média')
+      ),
+    };
+
+    const marcadoresVisuais: MarcadoresVisuais = {
+      abdome_e_tronco: String(result.avaliacao.marcadores_visuais?.abdome_e_tronco || 'Parede abdominal analisada visualmente.'),
+      ombros_e_bracos: String(result.avaliacao.marcadores_visuais?.ombros_e_bracos || 'Cintura escapular e membros superiores avaliados.'),
+      flancos_e_cintura: String(result.avaliacao.marcadores_visuais?.flancos_e_cintura || 'Região de flancos e proporção da cintura analisadas.'),
+      vascularizacao: String(result.avaliacao.marcadores_visuais?.vascularizacao || 'Grau de vascularização compatível com o biotipo.'),
+    };
+
     return {
       fase: 'AVALIACAO',
       avaliacao: {
-        bf_estimado: String(result.avaliacao.bf_estimado),
+        bf_estimado: bfEstimado,
+        classificacao_bf: classificacaoBf,
+        metrica_antropometrica: metricaAntropometrica,
+        marcadores_visuais: marcadoresVisuais,
         pontos_fortes: Array.isArray(result.avaliacao.pontos_fortes) ? result.avaliacao.pontos_fortes : [],
         pontos_fracos: Array.isArray(result.avaliacao.pontos_fracos) ? result.avaliacao.pontos_fracos : [],
         postura_observacoes: String(result.avaliacao.postura_observacoes || ''),

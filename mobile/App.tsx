@@ -88,6 +88,7 @@ export default function App() {
 
   // Estado do Formulário de Anamnese
   const [nome, setNome] = useState('');
+  const [sexo, setSexo] = useState<'masculino' | 'feminino'>('masculino');
   const [idade, setIdade] = useState('');
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
@@ -444,16 +445,47 @@ export default function App() {
     setTreinoIniciado(false);
   };
 
-  // Função para tirar/selecionar foto
-  const selecionarFoto = async (tipo: 'frente' | 'costas' | 'perfil') => {
+  // Função para tirar foto com a câmera
+  const tirarFotoCamera = async (tipo: 'frente' | 'costas' | 'perfil') => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão de Câmera', 'É necessário permitir o acesso à câmera para fotografar seu alinhamento postural.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0].base64) {
+        const asset = result.assets[0];
+        setFotos((prev) => ({
+          ...prev,
+          [tipo]: {
+            uri: asset.uri,
+            mimeType: asset.mimeType || 'image/jpeg',
+            base64Data: asset.base64,
+            tipo,
+          },
+        }));
+      }
+    } catch (e: any) {
+      console.warn('Erro ao abrir câmera:', e);
+    }
+  };
+
+  // Função para escolher foto da galeria
+  const escolherFotoGaleria = async (tipo: 'frente' | 'costas' | 'perfil') => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.5,
+      quality: 0.6,
       base64: true,
     });
 
-    if (!result.canceled && result.assets[0].base64) {
+    if (!result.canceled && result.assets && result.assets[0].base64) {
       const asset = result.assets[0];
       setFotos((prev) => ({
         ...prev,
@@ -467,12 +499,35 @@ export default function App() {
     }
   };
 
+  // Função para tirar/selecionar foto com diálogo de escolha
+  const selecionarFoto = (tipo: 'frente' | 'costas' | 'perfil') => {
+    Alert.alert(
+      `Foto: ${tipo.toUpperCase()}`,
+      'Como você deseja capturar a foto para a análise antropométrica da IA?',
+      [
+        {
+          text: '📸 Tirar Foto (Câmera)',
+          onPress: () => tirarFotoCamera(tipo),
+        },
+        {
+          text: '🖼️ Escolher da Galeria',
+          onPress: () => escolherFotoGaleria(tipo),
+        },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
   // Função para Preencher Dados de Teste Rápido (Modo Dev/Admin)
   const handlePreencherDadosDemo = () => {
     const FOTO_SAMPLE = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
     const SAMPLE_URI = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=400&q=80';
 
     setNome((prev) => prev || 'Pedro Pereira');
+    setSexo('masculino');
     setIdade('24');
     setPeso('78');
     setAltura('178');
@@ -524,6 +579,7 @@ export default function App() {
       idade: Number(idade),
       peso: Number(peso),
       altura: Number(altura),
+      sexo,
       objetivo,
       nivel_experiencia: nivel,
       dias_disponiveis: Number(dias),
@@ -557,6 +613,7 @@ export default function App() {
       idade: Number(idade),
       peso: Number(peso),
       altura: Number(altura),
+      sexo,
       objetivo,
       nivel_experiencia: nivel,
       dias_disponiveis: Number(dias),
@@ -1419,6 +1476,25 @@ export default function App() {
                     <Text style={[styles.label, { color: t.textSecondary }]}>Nome Completo</Text>
                     <TextInput style={[styles.input, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.textPrimary }]} value={nome} onChangeText={setNome} placeholder="Ex: Pedro Pereira" placeholderTextColor={t.textSecondary} />
 
+                    {/* SELETOR DE SEXO BIOLÓGICO */}
+                    <Text style={[styles.label, { marginTop: 10, color: t.textSecondary }]}>
+                      Sexo Biológico (essencial para precisão do % BF):
+                    </Text>
+                    <View style={styles.chipContainer}>
+                      <AeroBubbleChip
+                        label="👨 Masculino"
+                        active={sexo === 'masculino'}
+                        onPress={() => setSexo('masculino')}
+                        theme={t}
+                      />
+                      <AeroBubbleChip
+                        label="👩 Feminino"
+                        active={sexo === 'feminino'}
+                        onPress={() => setSexo('feminino')}
+                        theme={t}
+                      />
+                    </View>
+
                     <View style={styles.row}>
                       <View style={styles.halfInput}>
                         <Text style={[styles.label, { color: t.textSecondary }]}>Idade</Text>
@@ -1516,6 +1592,25 @@ export default function App() {
                     {/* UPLOAD DE FOTOS CORPORAIS */}
                     <Text style={[styles.cardTitle, { marginTop: 22, color: t.textPrimary }]}>Fotos Corporais</Text>
 
+                    {/* GUIA DE ENQUADRAMENTO E SILHUETA */}
+                    <View style={{
+                      backgroundColor: 'rgba(0, 210, 255, 0.08)',
+                      borderColor: 'rgba(0, 210, 255, 0.28)',
+                      borderWidth: 1,
+                      borderRadius: 16,
+                      padding: 12,
+                      marginBottom: 12,
+                    }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: t.accentAqua, marginBottom: 4 }}>
+                        🎯 Diretrizes para Máxima Precisão do % BF:
+                      </Text>
+                      <Text style={{ fontSize: 11, color: t.textSecondary, lineHeight: 16 }}>
+                        • Enquadre o corpo inteiro (da cabeça aos pés) na vertical.{'\n'}
+                        • Mantenha a câmera na altura do tronco com boa iluminação frontal.{'\n'}
+                        • Fique em postura natural ereta com o abdômen relaxado (sem contração forçada).
+                      </Text>
+                    </View>
+
                     <View style={styles.photoContainer}>
                       {(['frente', 'costas', 'perfil'] as const).map((tipo) => (
                         <TouchableOpacity
@@ -1584,7 +1679,96 @@ export default function App() {
                       <Text style={{ fontSize: 30, fontWeight: '900', color: t.accentLime, letterSpacing: 1 }}>
                         {resultadoAvaliacao.avaliacao.bf_estimado}
                       </Text>
+                      {resultadoAvaliacao.avaliacao.classificacao_bf && (
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: t.accentAqua, marginTop: 4 }}>
+                          ⚡ {resultadoAvaliacao.avaliacao.classificacao_bf}
+                        </Text>
+                      )}
                     </LinearGradient>
+
+                    {/* PARÂMETROS BIOMÉTRICOS CALCULADOS */}
+                    {resultadoAvaliacao.avaliacao.metrica_antropometrica && (
+                      <View style={{
+                        backgroundColor: t.inputBg,
+                        borderRadius: 16,
+                        padding: 12,
+                        marginBottom: 14,
+                        borderWidth: 1,
+                        borderColor: t.cardBorder,
+                      }}>
+                        <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textPrimary, marginBottom: 8 }}>
+                          📊 Âncoras Antropométricas & Biotipo
+                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={{ fontSize: 11.5, color: t.textSecondary }}>IMC Calculado:</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.accentAqua }}>
+                            {resultadoAvaliacao.avaliacao.metrica_antropometrica.imc} kg/m² ({resultadoAvaliacao.avaliacao.metrica_antropometrica.classificacao_imc})
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={{ fontSize: 11.5, color: t.textSecondary }}>Referência Antropométrica (Deurenberg):</Text>
+                          <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.textPrimary }}>
+                            {resultadoAvaliacao.avaliacao.metrica_antropometrica.bf_deurenberg_referencia}%
+                          </Text>
+                        </View>
+                        {resultadoAvaliacao.avaliacao.metrica_antropometrica.densidade_muscular && (
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={{ fontSize: 11.5, color: t.textSecondary }}>Densidade Muscular Avaliada:</Text>
+                            <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: t.accentLime }}>
+                              {resultadoAvaliacao.avaliacao.metrica_antropometrica.densidade_muscular}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* MARCADORES ANATÔMICOS VISUAIS */}
+                    {resultadoAvaliacao.avaliacao.marcadores_visuais && (
+                      <View style={{
+                        backgroundColor: t.inputBg,
+                        borderRadius: 16,
+                        padding: 12,
+                        marginBottom: 14,
+                        borderWidth: 1,
+                        borderColor: t.cardBorder,
+                      }}>
+                        <Text style={{ fontSize: 12, fontWeight: 'bold', color: t.textPrimary, marginBottom: 8 }}>
+                          👁️ Marcadores Anatômicos Visuais Identificados
+                        </Text>
+                        {resultadoAvaliacao.avaliacao.marcadores_visuais.abdome_e_tronco && (
+                          <View style={{ marginBottom: 6 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: t.accentAqua }}>Tronco & Abdômen:</Text>
+                            <Text style={{ fontSize: 11, color: t.textSecondary, lineHeight: 15 }}>
+                              {resultadoAvaliacao.avaliacao.marcadores_visuais.abdome_e_tronco}
+                            </Text>
+                          </View>
+                        )}
+                        {resultadoAvaliacao.avaliacao.marcadores_visuais.ombros_e_bracos && (
+                          <View style={{ marginBottom: 6 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: t.accentAqua }}>Deltoides & Braços:</Text>
+                            <Text style={{ fontSize: 11, color: t.textSecondary, lineHeight: 15 }}>
+                              {resultadoAvaliacao.avaliacao.marcadores_visuais.ombros_e_bracos}
+                            </Text>
+                          </View>
+                        )}
+                        {resultadoAvaliacao.avaliacao.marcadores_visuais.flancos_e_cintura && (
+                          <View style={{ marginBottom: 6 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: t.accentAqua }}>Flancos & Cintura (V-Taper):</Text>
+                            <Text style={{ fontSize: 11, color: t.textSecondary, lineHeight: 15 }}>
+                              {resultadoAvaliacao.avaliacao.marcadores_visuais.flancos_e_cintura}
+                            </Text>
+                          </View>
+                        )}
+                        {resultadoAvaliacao.avaliacao.marcadores_visuais.vascularizacao && (
+                          <View>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: t.accentAqua }}>Vascularização Periférica:</Text>
+                            <Text style={{ fontSize: 11, color: t.textSecondary, lineHeight: 15 }}>
+                              {resultadoAvaliacao.avaliacao.marcadores_visuais.vascularizacao}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
 
                     <Text style={[styles.sectionHeader, { color: t.accentLime }]}>Pontos Fortes Musculares:</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>

@@ -41,14 +41,16 @@ graph TD
 ## 🚀 3. Módulos e Funcionalidades Implementadas
 
 ### 3.1. Fluxo de Anamnese e Prescrição em 3 Fases
-1. **Fase 1 (Coleta de Dados Biométricos & Fotos)**:
-   - Coleta de dados como Peso, Altura, Idade, Nível de Treino, Frequência Semanal e Limitações Articulares.
+1. **Fase 1 (Coleta de Dados Biométricos, Sexo Biológico & Fotos)**:
+   - Coleta de dados como Sexo Biológico (Masculino/Feminino), Peso, Altura, Idade, Nível de Treino, Frequência Semanal e Limitações Articulares.
    - Opção de informar % BF oficial de nutricionista ou autorizar a estimativa por visão computacional da IA.
-   - Upload guiado de 3 fotos corporais (*Frente*, *Costas*, *Perfil*).
+   - Captura guiada de 3 fotos corporais (*Frente*, *Costas*, *Perfil*) via Câmera nativa ou Galeria, com diretrizes visuais de enquadramento corporal e silhueta.
    - Botão de **Modo Desenvolvedor** seguro (restrito aos e-mails autorizados em `devConfig.ts`) para testes rápidos.
-2. **Fase 2 (Validação do Diagnóstico Visual da IA)**:
-   - Apresentação do % BF estimado, pontos fortes musculares, pontos fracos prioritários e observações posturais.
-   - O aluno avalia o diagnóstico e valida com o botão **Concordo 100% / Gerar Treino**.
+2. **Fase 2 (Validação do Diagnóstico Antropométrico & Visual da IA)**:
+   - Apresentação do % BF estimado calibrado em 3 camadas (Prevalência clínica do nutricionista, âncoras matemáticas via IMC e Deurenberg, e leitura anatômica dos 4 quadrantes visuais).
+   - Apresentação de parâmetros biométricos (IMC, referência Deurenberg, densidade muscular) e marcadores anatômicos (abdômen/linha alba, deltoides/braços, flancos e vascularização).
+   - Apresentação de pontos fortes musculares, prioridades biomecânicas de treino, observações posturais e parecer do especialista.
+   - O aluno avalia o diagnóstico e valida com o botão **Concordo 100% • Prescrever Treino**.
 3. **Fase 3 (Ficha de Treino Prescrita)**:
    - Montagem de divisão de treino personalizada (`Dia 1`, `Dia 2`, `Dia 3`...).
    - Cada exercício contém séries de trabalho, repetições alvo, RIR, descanso em segundos e cadência/foco biomecânico.
