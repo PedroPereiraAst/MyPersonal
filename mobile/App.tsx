@@ -37,6 +37,7 @@ import {
   AeroBubbleChip,
   AeroBadge,
 } from './src/components/AeroComponents';
+import { CameraSilhouetteModal } from './src/components/CameraSilhouetteModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Play, Pause, Square } from 'lucide-react-native';
 
@@ -105,6 +106,8 @@ export default function App() {
 
   // Fotos Corporais
   const [fotos, setFotos] = useState<{ frente?: ImagemFoto; costas?: ImagemFoto; perfil?: ImagemFoto }>({});
+  const [cameraSilhuetaVisivel, setCameraSilhuetaVisivel] = useState(false);
+  const [cameraTipoAlvo, setCameraTipoAlvo] = useState<'frente' | 'costas' | 'perfil'>('frente');
 
   // Respostas da IA
   const [resultadoAvaliacao, setResultadoAvaliacao] = useState<AvaliacaoFisica | null>(null);
@@ -445,35 +448,22 @@ export default function App() {
     setTreinoIniciado(false);
   };
 
-  // Função para tirar foto com a câmera
-  const tirarFotoCamera = async (tipo: 'frente' | 'costas' | 'perfil') => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissão de Câmera', 'É necessário permitir o acesso à câmera para fotografar seu alinhamento postural.');
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.6,
-        base64: true,
-      });
+  // Função para abrir câmera com silhueta anatômica
+  const abrirCameraSilhueta = (tipo: 'frente' | 'costas' | 'perfil') => {
+    setCameraTipoAlvo(tipo);
+    setCameraSilhuetaVisivel(true);
+  };
 
-      if (!result.canceled && result.assets && result.assets[0].base64) {
-        const asset = result.assets[0];
-        setFotos((prev) => ({
-          ...prev,
-          [tipo]: {
-            uri: asset.uri,
-            mimeType: asset.mimeType || 'image/jpeg',
-            base64Data: asset.base64,
-            tipo,
-          },
-        }));
-      }
-    } catch (e: any) {
-      console.warn('Erro ao abrir câmera:', e);
-    }
+  const handleFotoCapturadaSilhueta = (tipo: 'frente' | 'costas' | 'perfil', foto: ImagemFoto) => {
+    setFotos((prev) => ({
+      ...prev,
+      [tipo]: foto,
+    }));
+  };
+
+  // Função para tirar foto com a câmera (agora integrada à Silhueta Guia)
+  const tirarFotoCamera = (tipo: 'frente' | 'costas' | 'perfil') => {
+    abrirCameraSilhueta(tipo);
   };
 
   // Função para escolher foto da galeria
@@ -506,8 +496,8 @@ export default function App() {
       'Como você deseja capturar a foto para a análise antropométrica da IA?',
       [
         {
-          text: '📸 Tirar Foto (Câmera)',
-          onPress: () => tirarFotoCamera(tipo),
+          text: '📸 Câmera com Silhueta (Recomendado)',
+          onPress: () => abrirCameraSilhueta(tipo),
         },
         {
           text: '🖼️ Escolher da Galeria',
@@ -2163,6 +2153,15 @@ export default function App() {
             </AeroGlassCard>
           </View>
         </Modal>
+
+        {/* MODAL DE CÂMERA COM SILHUETA CORPORAL & ESCALA PIXEL-TO-CM */}
+        <CameraSilhouetteModal
+          visible={cameraSilhuetaVisivel}
+          initialTipo={cameraTipoAlvo}
+          onClose={() => setCameraSilhuetaVisivel(false)}
+          onFotoCapturada={handleFotoCapturadaSilhueta}
+          theme={t}
+        />
       </SafeAreaView>
     </LinearGradient>
   );

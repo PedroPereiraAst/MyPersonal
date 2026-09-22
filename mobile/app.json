@@ -20,6 +20,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O MyPersonal precisa acessar a câmera para alinhar sua postura e silhueta anatômica na análise antropométrica."
+        }
+      ]
+    ]
   }
 }
