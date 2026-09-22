@@ -27,7 +27,7 @@ async function testSupabaseFull() {
 
   console.log('✅ Aluno e Avaliação Salvos! ID Aluno:', resAvaliacao?.alunoId);
 
-  // 2. Salva Ficha de Treino Prescrita pelo Gemini 3.6 Flash
+  // 2. Salva Ficha de Treino Prescrita pela IA (AIService)
   if (resAvaliacao) {
     const mockTreino = {
       fase: 'TREINO',

@@ -9,7 +9,7 @@ Este documento é o seu **guia de progresso pessoal**. Aqui registramos tudo o q
 ```text
 PersonalTrainer/
 ├── mobile/      # Frontend: React Native com Expo + TypeScript
-└── server/      # Backend: API Node.js com Fastify + TypeScript + Gemini AI
+└── server/      # Backend: API Node.js com Fastify + TypeScript + 9Router AI
 ```
 
 ---
@@ -22,14 +22,14 @@ PersonalTrainer/
 - [x] **Passo 2: Configuração do Backend (Node.js + Fastify)**
   - Entrar no diretório `server/`.
   - Criar o `package.json`.
-  - Instalar dependências (`fastify`, `dotenv`, `@google/genai`, `@supabase/supabase-js`, `typescript`, `tsx`).
+  - Instalar dependências (`fastify`, `dotenv`, `@supabase/supabase-js`, `typescript`, `tsx`).
 - [x] **Passo 3: Configuração do TypeScript e Primeiro Servidor**
   - Criar `tsconfig.json` no server.
   - Criar o primeiro endpoint HTTP `/health` em `src/server.ts`.
-- [x] **Passo 4: Contratos de Dados e Schemas do Gemini**
+- [x] **Passo 4: Contratos de Dados e Tipagens da IA**
   - Configurar variáveis de ambiente (`.env`).
-  - Definir interfaces TypeScript e JSON Schemas (`AvaliacaoSchema` e `TreinoSchema`).
-- [x] **Passo 5: Serviço de IA Multimodal (Gemini Service)**
+  - Definir interfaces TypeScript (`AvaliacaoFisica`, `FichaTreino`, `ExercicioItem`).
+- [x] **Passo 5: Serviço de IA Multimodal (AIService / 9Router)**
   - Implementar Visão Computacional para fotos de anamnese.
   - Implementar Prescrição Estruturada de Treino.
 - [x] **Passo 6: Rotas da API Fastify**
@@ -68,20 +68,19 @@ PersonalTrainer/
   - **ES Modules no Node.js**: `"type": "module"` permite o uso nativo de `import/export`.
   - **Health Check Routes**: Padrão de mercado para validar se a API está online e aceitando requisições.
 
-### ✅ Passo 4: Contratos de Dados & JSON Schemas do Gemini
+### ✅ Passo 4: Contratos de Dados & Tipagens da IA
 - **O que foi feito:**
   - Criamos o arquivo `.env` para proteger segredos de API.
-  - Definimos as interfaces TypeScript (`AvaliacaoFisica`, `FichaTreino`) e os Schemas estritos do Gemini (`AvaliacaoSchema`, `TreinoSchema`).
+  - Definimos as interfaces TypeScript (`AvaliacaoFisica`, `FichaTreino`, `ExercicioItem`, `AnamneseInput`).
 - **Conceitos Aprendidos:**
-  - **Structured Outputs / Schemas**: Como forçar IAs multimodais a devolver JSON estrito em vez de textos aleatórios, impedindo a quebra da interface do app mobile.
-  - **Type-only Imports**: Uso de `import { Type, type Schema }` para separar símbolos JS de tipos TypeScript.
+  - **Structured Outputs / JSON Mode**: Como instruir o motor de IA a devolver JSON estrito em vez de textos soltos, garantindo a integridade dos dados para o app mobile.
 
-### ✅ Passo 5: Serviço da IA Gemini Multimodal (`gemini.service.ts`)
+### ✅ Passo 5: Serviço da IA Multimodal (`ai.service.ts` / 9Router)
 - **O que foi feito:**
-  - Criamos a classe `GeminiService` com os métodos `analisarAvaliacaoFisica` e `gerarTreinoPrescrito`.
+  - Criamos a classe `AIService` conectada ao gateway de IA 9Router, com métodos `analisarAvaliacaoFisica`, `gerarTreinoPrescrito` e `substituirExercicio`.
   - Adicionamos a inteligência de negócios: checar se o aluno já passou no nutricionista (usando BF oficial) ou se autoriza a IA estimar pelas fotos.
 - **Conceitos Aprendidos:**
-  - **Service Layer**: Isolar chamadas de terceiros (como a API do Gemini) fora das rotas HTTP do servidor.
+  - **Service Layer**: Isolar integrações de IA e roteadores fora das rotas HTTP do servidor.
   - **Prompts Dinâmicos**: Construção de prompts contextuais baseados no perfil e permissões do usuário.
 
 ### ✅ Passo 6: Rotas HTTP da API (`personal.routes.ts`)

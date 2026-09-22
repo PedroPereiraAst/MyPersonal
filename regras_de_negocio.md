@@ -5,7 +5,7 @@ Este documento descreve as **Regras de Negócio**, os **Protocolos Éticos de Pr
 ---
 
 ## 1. 📌 Visão Geral do Sistema
-O **MyPersonal** é uma plataforma mobile e backend focada em avaliação física multimodal (visão computacional + anamnese) e prescrição de fichas de treino personalizadas utilizando o modelo **Google Gemini 3.6 Flash**.
+O **MyPersonal** é uma plataforma mobile e backend focada em avaliação física multimodal (visão computacional + anamnese) e prescrição de fichas de treino personalizadas utilizando inteligência artificial integrada via **9Router Gateway**.
 
 ---
 
@@ -15,7 +15,7 @@ Por razões éticas, de privacidade e conformidade com leis de proteção de dad
 
 1. **Processamento 100% Efêmero em Memória RAM**:
    - As fotos corporais (Frente, Costas, Perfil) enviadas pelo aplicativo mobile são transferidas de forma criptografada (HTTPS/TLS) diretamente para o backend.
-   - O backend utiliza o buffer em memória RAM **exclusivamente durante a execução da análise visual do Gemini 3.6 Flash**.
+   - O backend utiliza o buffer em memória RAM **exclusivamente durante a execução da análise visual da IA**.
    - **Nenhuma foto é salva em disco, banco de dados ou armazenamento na nuvem (Storage)**.
 
 2. **Descarte Imediato**:
@@ -62,7 +62,7 @@ O aluno deve obrigatoriamente selecionar uma das modalidades:
 
 1. **Caso o aluno JÁ TENHA passado por nutricionista (`passou_nutricionista = true`)**:
    - O aplicativo libera um campo para digitar o % de gordura (BF) oficial medido pelo profissional.
-   - A IA do Gemini é **obrigada** a utilizar este valor exato no relatório de avaliação, sem alterá-lo.
+   - A IA é **obrigada** a utilizar este valor exato no relatório de avaliação, sem alterá-lo.
    - As fotos corporais são analisadas exclusivamente para identificar assimetrias, pontos fortes/fracos e desvios posturais.
 
 2. **Caso o aluno NUNCA TENHA ido ao nutricionista (`passou_nutricionista = false`)**:
@@ -106,7 +106,7 @@ Cada exercício prescreve:
 Caso o aluno não possua um aparelho na sua academia ou sinta desconforto em determinado movimento:
 1. Cada card de exercício possui um botão **`🔄 Trocar`**.
 2. Ao clicar, o aluno pode informar opcionalmente o motivo (ex: *"Sem máquina de leg press na academia"*).
-3. O **Gemini 3.6 Flash** gera em tempo real um **exercício substituto equivalente**:
+3. O **motor de IA (9Router)** gera em tempo real um **exercício substituto equivalente**:
    - Mantém o mesmo grupo muscular alvo e vetores de força.
    - Mantém as séries, reps e descanso compatíveis.
    - Fornece uma justificativa biomecânica para a escolha.
@@ -117,6 +117,6 @@ Caso o aluno não possua um aparelho na sua academia ou sinta desconforto em det
 ## 8. 🛡️ Arquitetura Técnica & Resiliência
 
 - **Backend**: Fastify em Node.js / TypeScript com suporte a requisições de até 30MB (`bodyLimit: 30MB` para tráfego seguro de imagens em base64 via HTTPS).
-- **Modelo de IA**: Exclusivo **`gemini-3.6-flash`** via SDK oficial `@google/genai`.
-- **Resiliência HTTP 503**: Sistema de retry automático de até 3 tentativas com intervalo de 1,5s caso os servidores do Google estejam em pico de demanda.
+- **Modelo de IA**: Gateway **`9Router`** local via interface compatível OpenAI com visão multimodal.
+- **Resiliência e Fallback**: Fallback estruturado automático garantindo disponibilidade e treino de 4 dias completo mesmo em contingência.
 - **Banco de Dados**: Supabase PostgreSQL (`alunos`, `avaliacoes`, `treinos`) preparado para vinculação com Supabase Auth (`user_id`).

@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { GeminiService, type AnamneseInput, type ImagemInput } from '../services/gemini.service.js';
+import { AIService, type AnamneseInput, type ImagemInput } from '../services/ai.service.js';
 import { SupabaseService } from '../services/supabase.service.js';
 import type { AvaliacaoFisica, ExercicioItem } from '../types/schemas.js';
 
@@ -112,8 +112,8 @@ export async function personalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM pelo Gemini 3.6 Flash)
-      const avaliacao = await GeminiService.analisarAvaliacaoFisica(anamnese, fotos);
+      // 1. Visão Computacional Multimodal (processamento EFÊMERO em memória RAM via IA)
+      const avaliacao = await AIService.analisarAvaliacaoFisica(anamnese, fotos);
 
       // 2. Tenta salvar no Supabase em SEGUNDO PLANO (não-bloqueante) VINCULANDO O USER_ID AUTENTICADO
       SupabaseService.salvarAvaliacao(anamnese, avaliacao.avaliacao, userId).catch((err) => {
@@ -151,8 +151,8 @@ export async function personalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // 1. Chama a geração de treino no GeminiService (Gemini 3.6 Flash)
-      const treino = await GeminiService.gerarTreinoPrescrito(anamnese, avaliacao);
+      // 1. Chama a geração de treino no AIService
+      const treino = await AIService.gerarTreinoPrescrito(anamnese, avaliacao);
 
       // 2. Persiste assincronamente a Ficha de Treino no Supabase em segundo plano
       SupabaseService.salvarTreino(treino, avaliacaoId, alunoId).catch((err) => {
@@ -189,7 +189,7 @@ export async function personalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const resultado = await GeminiService.substituirExercicio(
+      const resultado = await AIService.substituirExercicio(
         exercicioOriginal,
         objetivo,
         motivoSubstituicao

@@ -3,7 +3,7 @@
 > **Versão do Sistema:** 2.4.0  
 > **Status:** Operacional e em Produção Local  
 > **Design System:** Samsung One UI 8.5 (Liquid Glass Translucency)  
-> **Arquitetura:** Client-Server Desacoplado (Mobile/Web + Fastify API + Supabase PostgreSQL + Google Gemini AI)
+> **Arquitetura:** Client-Server Desacoplado (Mobile/Web + Fastify API + Supabase PostgreSQL + 9Router AI Gateway)
 
 ---
 
@@ -13,7 +13,7 @@ O **MyPersonal** é uma plataforma inteligente de alta performance projetada par
 
 1. **Visão Computacional Multimodal**: Análise postural, identificação de assimetrias e estimativa de percentual de gordura corporal (% BF) através de fotografias corporais.
 2. **Prescrição Biomecânica de Alta Precisão**: Algoritmos de IA treinados com conceitos de periodização, Repetições de Reserva (RIR), tempo de descanso otimizado e cadência excêntrica/concêntrica.
-3. **Privacidade e Ética como Princípio Fundamental**: Todas as imagens enviadas pelos alunos são processadas **100% de forma efêmera na memória RAM** pelo Google Gemini e imediatamente descartadas pelo coletor de lixo, garantindo conformidade absoluta com a LGPD/GDPR sem retenção indevida de dados biométricos sensíveis.
+3. **Privacidade e Ética como Princípio Fundamental**: Todas as imagens enviadas pelos alunos são processadas **100% de forma efêmera na memória RAM** pelo motor de IA e imediatamente descartadas pelo coletor de lixo, garantindo conformidade absoluta com a LGPD/GDPR sem retenção indevida de dados biométricos sensíveis.
 4. **Experiência Offline-First & Sobrecarga Progressiva**: Registro ágil de cargas (kg) e repetições em cada exercício com persistência local instantânea e sincronização em nuvem.
 
 ---
@@ -23,7 +23,7 @@ O **MyPersonal** é uma plataforma inteligente de alta performance projetada par
 ```mermaid
 graph TD
     A[📱 Mobile / Web App - React Native Expo] -->|HTTP / JSON / Auth JWT| B[⚡ Servidor API - Node.js Fastify]
-    B -->|Visão Computacional & Prompting Estruturado| C[🤖 Google Gemini 2.5 Flash / Google GenAI SDK]
+    B -->|Visão Computacional & Prompting Estruturado| C[🤖 9Router Gateway / Antigravity LLMs]
     B -->|Persistência Relacional Assíncrona| D[(🗄️ Supabase PostgreSQL)]
     A -->|Persistência Local Offline| E[💾 AsyncStorage Dispositivo]
     A -->|Exportação Nativa / Web Print| F[📄 Gerador de PDF expo-print]
@@ -33,7 +33,7 @@ graph TD
 
 * **Frontend Client (`mobile/`)**: Aplicativo híbrido construído em **React Native com Expo 52**, compatível com Android, iOS e Navegadores Web. Implementa design system inspirado na **Samsung One UI 8.5** com efeitos translúcidos *Liquid Glass*.
 * **Backend API Gateway (`server/`)**: Microsserviço de alta vazão construído em **Fastify (Node.js)** e **TypeScript**, responsável por orquestrar a inteligência artificial, validação de tokens JWT e persistência relacional.
-* **Motor de IA Multimodal (`server/src/services/gemini.service.ts`)**: Integração com a suíte de última geração da Google GenAI (`@google/genai`), forçando respostas JSON através de contratos estritos de dados (*Strict JSON Schemas*).
+* **Motor de IA Multimodal (`server/src/services/ai.service.ts`)**: Integração com o gateway de IA 9Router, forçando respostas JSON através de esquemas estruturados e com contingência automática.
 * **Banco de Dados & Autenticação (`Supabase PostgreSQL`)**: Armazenamento relacional com tabelas estruturadas (`alunos`, `avaliacoes`, `treinos`, `historico_cargas`).
 
 ---
@@ -56,7 +56,7 @@ graph TD
 
 ### 3.2. Recurso Exclusivo: Substituição Individual de Exercícios
 - Caso a academia não possua determinada máquina ou o aluno sinta desconforto, ele pode clicar em **Substituir** em qualquer exercício.
-- A IA do Gemini analisa o vetor de força e grupo muscular do exercício original e prescreve um exercício substituto equivalente, justificando a escolha biomecânica.
+- A IA analisa o vetor de força e grupo muscular do exercício original e prescreve um exercício substituto equivalente, justificando a escolha biomecânica.
 
 ### 3.3. Sistema de Registro de Cargas & Sobrecarga Progressiva
 - Cada exercício da ficha ativa possui campos dedicados para anotação de **Carga (kg)** e **Repetições** de cada série.
@@ -83,7 +83,7 @@ graph TD
 | **Persistência Local** | AsyncStorage | `1.23.1` | Cache offline de cargas e configurações do usuário |
 | **Geração de PDF** | Expo Print & Sharing | `~57.0.1` | Renderização e exportação de documentos PDF de treino |
 | **Backend API** | Fastify | `^5.0.0` | Framework web Node.js de ultrabaixa latência |
-| **Inteligência Artificial** | Google GenAI SDK | `@google/genai` | Interface oficial de modelos Gemini 2.5 Flash / 3.6 Flash |
+| **Inteligência Artificial** | 9Router Gateway | Local / OpenAI-Compatible | Gateway de roteamento de modelos com visão multimodal |
 | **Banco de Dados** | Supabase PostgreSQL | `^2.112.2` | Banco relacional na nuvem e autenticação de usuários |
 | **Ambiente de Execução** | Node.js | `20+ LTS` | Plataforma runtime JavaScript server-side |
 
